@@ -268,6 +268,9 @@ export function Schedule() {
             <p className="text-[0.8125rem] font-semibold text-sub">
               {dayOcc.length ? `${dayOcc.length}개 중 ${doneCount}개 완료` : '등록된 일정이 없어요'}
             </p>
+            <button onClick={() => nav('/')} className="mt-1 text-[0.75rem] font-bold text-primary">
+              매일 하는 가게 루틴은 '오늘' 탭에서 시간대별로 챙겨요 →
+            </button>
           </div>
         </div>
         <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto px-5 pb-1">

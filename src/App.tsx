@@ -15,6 +15,8 @@ import { QuestionDetail } from '@/screens/QuestionDetail'
 import { My } from '@/screens/My'
 import { Notifications } from '@/screens/Notifications'
 import { Search } from '@/screens/Search'
+import { Challenges } from '@/screens/Challenges'
+import { Routines } from '@/screens/Routines'
 import { useReminders } from '@/lib/useReminders'
 
 function Gate() {
@@ -67,6 +69,8 @@ const router = createHashRouter([
       { path: '/ask/:id', element: <QuestionDetail /> },
       { path: '/notifications', element: <Notifications /> },
       { path: '/search', element: <Search /> },
+      { path: '/challenges', element: <Challenges /> },
+      { path: '/routines', element: <Routines /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

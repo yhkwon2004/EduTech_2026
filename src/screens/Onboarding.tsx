@@ -12,8 +12,8 @@ const SLIDES = [
     body: '손님 없는 시간에 짧게 배우고, 손이 바쁠 땐 귀로 들어요. 세금·마케팅·응대까지 사장님에게 필요한 것만.',
   },
   {
-    title: '일정은 한눈에,\n마감은 미리',
-    body: '발주·점검·마감 같은 매장 일정과 세금 신고 기한을 한곳에서. 빈 시간엔 학습을 쏙 넣어 드려요.',
+    title: '오늘 할 일,\n시간대별로 챙겨요',
+    body: '오픈 전부터 마감까지 가게 루틴을 시간대별로. 쉬는 시간·점심 틈엔 작은 도전 하나, 세금 기한은 미리 알려 드려요.',
   },
   {
     title: '궁금한 건\n바로 물어보세요',
@@ -51,14 +51,14 @@ function Illustration({ step }: { step: number }) {
           <div className="absolute left-1/2 top-1/2 w-[12.5rem] -translate-x-1/2 -translate-y-1/2 animate-pop rounded-[28px] bg-white p-4 shadow-card">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1.5 text-[0.8125rem] font-bold">
-                <CalendarDays className="size-4 text-primary" /> 오늘
+                <CalendarDays className="size-4 text-primary" /> 오늘 할 일
               </span>
               <span className="rounded-full bg-coral-50 px-2 py-0.5 text-[0.6875rem] font-bold text-coral">D-3 부가세</span>
             </div>
             {[
-              ['10:00', '오픈 준비', 'bg-primary'],
-              ['10:30', '식자재 발주', 'bg-orange'],
-              ['14:30', '3분 학습', 'bg-violet'],
+              ['오픈 전', '냉장고 온도 기록', 'bg-primary'],
+              ['쉬는 시간', '리뷰 답글 3개', 'bg-orange'],
+              ['마감', '문단속 확인', 'bg-violet'],
             ].map(([t, n, c]) => (
               <div key={t} className="mt-3 flex items-center gap-2.5">
                 <span className={cx('h-8 w-1 rounded-full', c)} />
@@ -68,7 +68,7 @@ function Illustration({ step }: { step: number }) {
             ))}
           </div>
           <div className="absolute bottom-8 right-2 flex items-center gap-1.5 rounded-full bg-violet px-3 py-2 text-[0.75rem] font-bold text-white shadow-card">
-            <Sparkles className="size-4" /> 틈새 시간 찾음
+            <Sparkles className="size-4" /> 오늘의 도전 +10P
           </div>
         </>
       )}
@@ -265,7 +265,7 @@ export function Onboarding() {
               알려 주세요
             </h1>
             <p className="mt-2 text-[0.875rem] leading-relaxed text-sub">
-              기본 루틴(오픈 준비 · 발주 · 마감 정산)을 일정에 넣고, 일정 사이 빈 시간에 학습을 추천해 드려요.
+              오픈 전 · 점심시간 · 쉬는 시간 · 마감처럼 시간대를 나눠 업종에 맞는 할 일을 챙겨 드리고, 틈새 시간엔 짧은 학습과 도전을 추천해요.
             </p>
             <div className="mt-7 grid grid-cols-2 gap-3">
               <label className="rounded-2xl bg-white p-4 shadow-card">

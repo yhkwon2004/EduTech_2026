@@ -5,6 +5,9 @@ import { useApp } from './app'
 import { dDayLabel, formatKo, todayKey } from '@/lib/date'
 import { occurrencesOn, upcomingDeadlines } from '@/lib/schedule'
 import { minutesByDate } from '@/lib/stats'
+import { ROUTINES } from '@/data/routines'
+import { buildToday, enabledRoutines, slotRanges, type SlotRange, type TodayItem } from '@/lib/today'
+import type { RoutineTemplate } from '@/types'
 
 /** 사용자 일정 + (설정 시) 세무 달력 */
 export function useAllEvents(): ScheduleEvent[] {
@@ -19,6 +22,33 @@ export function useAllEvents(): ScheduleEvent[] {
   }, [events, presetDone, show])
 }
 
+/** 특정 날짜의 '오늘 할 일' (루틴 + 일정 + 직접 추가한 할 일) */
+export function useToday(date: string = todayKey()): { ranges: SlotRange[]; items: TodayItem[]; routines: RoutineTemplate[] } {
+  const profile = useApp((s) => s.profile)
+  const on = useApp((s) => s.routineOn)
+  const off = useApp((s) => s.routineOff)
+  const weekdayOverride = useApp((s) => s.routineWeekday)
+  const custom = useApp((s) => s.customRoutines)
+  const taskDone = useApp((s) => s.taskDone)
+  const todos = useApp((s) => s.quickTodos)
+  const logs = useApp((s) => s.logs)
+  const events = useAllEvents()
+  return useMemo(() => {
+    const ranges = slotRanges(profile.openTime, profile.closeTime)
+    const routines = enabledRoutines({ templates: ROUTINES, custom, biz: profile.bizType, on, off, weekdayOverride })
+    const items = buildToday({
+      date,
+      ranges,
+      routines,
+      todos,
+      occurrences: occurrencesOn(events, date),
+      doneKeys: taskDone[date] ?? [],
+      learnedToday: logs.some((l) => l.date === date),
+    })
+    return { ranges, items, routines }
+  }, [date, profile, on, off, weekdayOverride, custom, taskDone, todos, logs, events])
+}
+
 export interface Notice {
   id: string
   kind: 'deadline' | 'today' | 'learn' | 'answer' | 'review'
@@ -30,6 +60,7 @@ export interface Notice {
 /** 알림 목록 — 일정·학습·답변 상태에서 만들어집니다 */
 export function useNotices(): Notice[] {
   const all = useAllEvents()
+  const { items: todayItems } = useToday()
   const logs = useApp((s) => s.logs)
   const goal = useApp((s) => s.profile.dailyGoal)
   const questions = useApp((s) => s.questions)
@@ -46,17 +77,17 @@ export function useNotices(): Notice[] {
         to: `/schedule?date=${o.date}`,
       })
     }
-    const todays = occurrencesOn(all, today).filter((o) => !o.done && o.event.type !== 'deadline')
-    if (todays.length) {
+    const left = todayItems.filter((i) => !i.done)
+    if (left.length) {
       out.push({
         id: `today-${today}`,
         kind: 'today',
-        title: `오늘 할 일 ${todays.length}개`,
-        body: todays
+        title: `오늘 남은 할 일 ${left.length}개`,
+        body: left
           .slice(0, 3)
-          .map((o) => o.event.title)
+          .map((i) => i.title)
           .join(' · '),
-        to: '/schedule',
+        to: '/',
       })
     }
     const mins = minutesByDate(logs)[today] ?? 0
@@ -90,7 +121,7 @@ export function useNotices(): Notice[] {
       }
     }
     return out
-  }, [all, logs, goal, questions, review])
+  }, [all, todayItems, logs, goal, questions, review])
 }
 
 export function useUnreadCount(): number {

@@ -46,8 +46,10 @@ export function badges(params: {
   questions: Question[]
   events: ScheduleEvent[]
   today: string
+  challengeCount?: number
+  routineChecks?: number
 }): Badge[] {
-  const { logs, progress, questions, events, today } = params
+  const { logs, progress, questions, events, today, challengeCount = 0, routineChecks = 0 } = params
   const doneLessons = Object.values(progress).filter((p) => p.done).length
   const courseDone = COURSES.some((c) => c.lessons.every((l) => progress[l.id]?.done))
   const s = streak(logs, today)
@@ -68,5 +70,8 @@ export function badges(params: {
     { id: 'help', name: '동네 선배', desc: '다른 사장님께 답변', icon: 'HandHeart', earned: myA >= 1 },
     { id: 'plan', name: '일정 달인', desc: '일정 10개 완료', icon: 'CalendarDays', earned: doneEvents >= 10 },
     { id: 'days5', name: '꾸준함', desc: '총 5일 학습', icon: 'Sunrise', earned: days >= 5 },
+    { id: 'ch1', name: '첫 도전', desc: '도전 1개 완료', icon: 'Target', earned: challengeCount >= 1 },
+    { id: 'ch20', name: '도전왕', desc: '도전 20번 완료', icon: 'Trophy', earned: challengeCount >= 20 },
+    { id: 'r50', name: '루틴 장인', desc: '루틴 50번 체크', icon: 'Award', earned: routineChecks >= 50 },
   ]
 }

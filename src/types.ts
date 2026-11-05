@@ -146,3 +146,60 @@ export interface ReviewItem {
   quizIndex: number
   addedAt: string
 }
+
+/* ───────── 오늘 할 일 · 루틴 · 도전 ───────── */
+
+/** 하루를 나누는 시간대 */
+export type SlotId = 'open' | 'morning' | 'lunch' | 'break' | 'evening' | 'close'
+
+/** 할 일·도전 분류: 학습 분야 + 사장님 컨디션 + 안전 */
+export type TaskTag = CategoryId | 'care' | 'safety' | 'learn'
+
+export interface RoutineTemplate {
+  id: string
+  title: string
+  slot: SlotId
+  minutes: number
+  tag: TaskTag
+  freq: 'daily' | 'weekly' | 'monthly'
+  /** weekly: 0(일)~6(토) */
+  weekday?: number
+  /** monthly: 1~28 */
+  monthDay?: number
+  /** 이 업종에서만 기본으로 켜짐 (없으면 모든 업종) */
+  bizTypes?: BizType[]
+  tip?: string
+  lessonId?: string
+  /** 'learn': 그날 레슨을 하나라도 끝내면 자동 완료 */
+  auto?: 'learn'
+  custom?: boolean
+}
+
+export interface QuickTodo {
+  id: string
+  title: string
+  slot: SlotId
+  date: string
+  challengeId?: string
+}
+
+export interface Challenge {
+  id: string
+  title: string
+  desc: string
+  why: string
+  minutes: number
+  /** 하기 좋은 시간대 */
+  slot: 'any' | SlotId
+  tag: TaskTag
+  level: 1 | 2 | 3
+  points: number
+  steps: string[]
+  lessonId?: string
+}
+
+export interface ChallengeLogEntry {
+  id: string
+  date: string
+  note?: string
+}

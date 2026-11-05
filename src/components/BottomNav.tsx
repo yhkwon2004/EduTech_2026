@@ -4,11 +4,13 @@ import {
   BookOpen,
   CalendarDays,
   CalendarPlus,
-  House,
+  ListChecks,
+  ListPlus,
   MessageCircleQuestionMark,
   Plus,
   RotateCcw,
   Timer,
+  Trophy,
   type LucideIcon,
 } from 'lucide-react'
 import { cx, Sheet } from './ui'
@@ -16,7 +18,7 @@ import { useApp } from '@/store/app'
 import { recommendLessons } from '@/lib/recommend'
 
 const TABS: { to: string; label: string; icon: LucideIcon }[] = [
-  { to: '/', label: '홈', icon: House },
+  { to: '/', label: '오늘', icon: ListChecks },
   { to: '/learn', label: '배움', icon: BookOpen },
   { to: '/schedule', label: '일정', icon: CalendarDays },
   { to: '/ask', label: '질문', icon: MessageCircleQuestionMark },
@@ -80,6 +82,20 @@ export function BottomNav() {
 
       <Sheet open={open} onClose={() => setOpen(false)} title="빠른 실행">
         <div className="grid grid-cols-2 gap-3 pb-2">
+          <QuickItem
+            icon={<ListPlus className="size-6" />}
+            color="bg-ink text-white"
+            title="할 일 추가"
+            desc="지금 시간대에 바로"
+            onClick={() => go('/?add=1')}
+          />
+          <QuickItem
+            icon={<Trophy className="size-6" />}
+            color="bg-sun-50 text-[#B7860B]"
+            title="오늘의 도전"
+            desc="틈새에 작은 미션 하나"
+            onClick={() => go('/challenges')}
+          />
           <QuickItem
             icon={<Timer className="size-6" />}
             color="bg-primary text-white"

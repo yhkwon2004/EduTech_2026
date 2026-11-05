@@ -19,17 +19,23 @@ import {
   Trash2,
   Type,
   Upload,
+  ListChecks,
+  Trophy,
 } from 'lucide-react'
 import type { BizType } from '@/types'
 import { useApp } from '@/store/app'
 import { BIZ_LABEL, BIZ_TYPES } from '@/data/categories'
 import { COURSE_MAP, LESSON_MAP } from '@/data/courses'
 import { badges, lastNDays, streak, totalMinutes } from '@/lib/stats'
+import { rankFor, totalPoints } from '@/lib/today'
 import { fromKey, todayKey, WEEKDAY_KO } from '@/lib/date'
 import { Icon } from '@/components/Icon'
 import { cx, EmptyState, PrimaryButton, Segmented, Sheet, Toggle } from '@/components/ui'
 
 type SheetKind = 'profile' | 'notes' | 'saved' | 'badges' | null
+
+/** 백업 파일에 담는 기록 */
+const BACKUP_KEYS = ['profile', 'settings', 'progress', 'logs', 'bookmarks', 'notes', 'review', 'events', 'presetDone', 'questions', 'readNotifs', 'routineOn', 'routineOff', 'routineWeekday', 'customRoutines', 'taskDone', 'quickTodos', 'challengeLog', 'challengeShuffle'] as const
 
 export function My() {
   const nav = useNavigate()
@@ -38,11 +44,14 @@ export function My() {
   const openSheet = (s: SheetKind) => setParams(s ? { sheet: s } : {}, { replace: true })
 
   const state = useApp()
-  const { profile, settings, logs, progress, questions, events, review, notes, bookmarks } = state
+  const { profile, settings, logs, progress, questions, events, review, notes, bookmarks, challengeLog, taskDone } = state
+  const points = totalPoints(challengeLog, taskDone)
+  const rank = rankFor(points)
+  const routineChecks = Object.values(taskDone).reduce((n, k) => n + k.filter((x) => x.startsWith('r:')).length, 0)
   const today = todayKey()
   const week = lastNDays(logs, today, 7)
   const maxBar = Math.max(profile.dailyGoal, ...week.map((d) => d.minutes))
-  const bs = badges({ logs, progress, questions, events, today })
+  const bs = badges({ logs, progress, questions, events, today, challengeCount: challengeLog.length, routineChecks })
   const earned = bs.filter((b) => b.earned).length
   const [confirmReset, setConfirmReset] = useState(false)
   const [importMsg, setImportMsg] = useState<string | null>(null)
@@ -60,9 +69,10 @@ export function My() {
   }
 
   const exportData = () => {
-    const { onboarded, profile, settings, progress, logs, bookmarks, notes, review, events, presetDone, questions, readNotifs } = useApp.getState()
+    const st = useApp.getState() as unknown as Record<string, unknown>
+    const data = Object.fromEntries(BACKUP_KEYS.map((k) => [k, st[k]]))
     const blob = new Blob(
-      [JSON.stringify({ app: 'golmok', version: 1, data: { onboarded, profile, settings, progress, logs, bookmarks, notes, review, events, presetDone, questions, readNotifs } }, null, 2)],
+      [JSON.stringify({ app: 'golmok', version: 2, data: { onboarded: true, ...data } }, null, 2)],
       { type: 'application/json' },
     )
     const a = document.createElement('a')
@@ -78,9 +88,8 @@ export function My() {
       const parsed = JSON.parse(await file.text())
       const d = parsed?.data
       if (parsed?.app !== 'golmok' || typeof d !== 'object' || !d || typeof d.profile !== 'object' || !Array.isArray(d.events)) throw new Error('shape')
-      const keys = ['profile', 'settings', 'progress', 'logs', 'bookmarks', 'notes', 'review', 'events', 'presetDone', 'questions', 'readNotifs'] as const
       const patch: Record<string, unknown> = { onboarded: true }
-      for (const k of keys) if (k in d) patch[k] = d[k]
+      for (const k of BACKUP_KEYS) if (k in d) patch[k] = d[k]
       useApp.setState(patch)
       setImportMsg('기록을 불러왔어요.')
     } catch {
@@ -155,6 +164,26 @@ export function My() {
         </div>
       </section>
 
+      {/* 도전 단계 */}
+      <section className="mt-5 px-5">
+        <button onClick={() => nav('/challenges')} className="flex w-full items-center gap-3.5 rounded-[1.25rem] bg-sun-50 p-4 text-left ring-1 ring-sun/40">
+          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-sun text-ink">
+            <Trophy className="size-6" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[0.75rem] font-bold text-[#B7860B]">도전 단계 · {points}P</span>
+            <span className="block text-[1.0625rem] font-extrabold">{rank.name}</span>
+            <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-white">
+              <span className="block h-full rounded-full bg-sun" style={{ width: `${Math.round(rank.progress * 100)}%` }} />
+            </span>
+            <span className="mt-1 block text-[0.6875rem] font-semibold text-sub">
+              도전 {challengeLog.length}번 · 루틴 체크 {routineChecks}번{rank.next ? ` · '${rank.next.name}'까지 ${rank.next.min - points}P` : ''}
+            </span>
+          </span>
+          <ChevronRight className="size-5 shrink-0 text-mute" />
+        </button>
+      </section>
+
       {/* 배지 */}
       <section className="mt-5 px-5">
         <button onClick={() => openSheet('badges')} className="block w-full rounded-[20px] bg-white p-5 text-left shadow-card">
@@ -186,6 +215,8 @@ export function My() {
           <MenuRow icon={<NotebookPen className="size-5" />} color="text-violet bg-violet-50" label="내 메모" value={`${Object.keys(notes).length}`} onClick={() => openSheet('notes')} />
           <MenuRow icon={<RotateCcw className="size-5" />} color="text-orange bg-orange-50" label="오답 복습" value={`${review.length}`} onClick={() => nav('/review')} />
           <MenuRow icon={<MessageCircleQuestionMark className="size-5" />} color="text-teal bg-teal-50" label="내 질문" value={`${questions.filter((q) => q.mine).length}`} onClick={() => nav('/ask?tab=mine')} />
+          <MenuRow icon={<ListChecks className="size-5" />} color="text-ink bg-bg" label="루틴 관리 (오늘 할 일)" onClick={() => nav('/routines')} />
+          <MenuRow icon={<Trophy className="size-5" />} color="text-[#B7860B] bg-sun-50" label="도전 기록" value={`${challengeLog.length}`} onClick={() => nav('/challenges')} />
           <MenuRow icon={<CalendarCheck className="size-5" />} color="text-primary bg-primary-50" label="일정 관리" onClick={() => nav('/schedule')} />
         </div>
       </section>

@@ -3,18 +3,23 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import type {
   Answer,
   CategoryId,
+  ChallengeLogEntry,
   LearnLog,
   LessonProgress,
   Profile,
   Question,
+  QuickTodo,
   ReviewItem,
+  RoutineTemplate,
   ScheduleEvent,
   Settings,
+  SlotId,
 } from '@/types'
 import { seedQuestions } from '@/data/community'
-import { addDays, minToTime, timeToMin, todayKey } from '@/lib/date'
+import { addDays, todayKey } from '@/lib/date'
 import { searchAll } from '@/lib/match'
 import { LESSON_MAP } from '@/data/courses'
+import { ROUTINE_MAP, defaultOn } from '@/data/routines'
 
 export const uid = (p = 'id') => `${p}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
 
@@ -35,57 +40,18 @@ const DEFAULT_SETTINGS: Settings = {
   speechRate: 1,
 }
 
-/** 영업시간에 맞춘 기본 루틴 일정 */
-export function starterEvents(profile: Profile, today: string): ScheduleEvent[] {
-  const open = timeToMin(profile.openTime)
-  let close = timeToMin(profile.closeTime)
-  if (close <= open) close = 24 * 60 - 1
-  return [
-    {
-      id: uid('ev'),
-      title: '오픈 준비',
-      date: today,
-      start: minToTime(Math.max(0, open - 30)),
-      end: minToTime(open),
-      type: 'store',
-      repeat: 'daily',
-      memo: '청소 · 재료 손질 · 냉장고 온도 기록',
-      doneOn: {},
-    },
-    {
-      id: uid('ev'),
-      title: '식자재 발주 확인',
-      date: today,
-      start: minToTime(open + 30),
-      end: minToTime(open + 50),
-      type: 'order',
-      repeat: 'weekly',
-      memo: '재고 확인 후 부족한 것만 주문',
-      doneOn: {},
-    },
-    {
-      id: uid('ev'),
-      title: '주간 재고 점검',
-      date: addDays(today, 2),
-      start: minToTime(Math.min(close - 120, open + 300)),
-      end: minToTime(Math.min(close - 90, open + 330)),
-      type: 'store',
-      repeat: 'weekly',
-      memo: '선입선출 정리 · 개봉일 라벨 확인',
-      doneOn: {},
-    },
-    {
-      id: uid('ev'),
-      title: '마감 정산',
-      date: today,
-      start: minToTime(close - 30),
-      end: minToTime(close),
-      type: 'store',
-      repeat: 'daily',
-      memo: '매출 확인 · 영수증 정리',
-      doneOn: {},
-    },
-  ]
+/**
+ * v1에서 온보딩 때 자동으로 넣던 루틴 일정 — 이제 '오늘 할 일' 루틴이 대신하므로 v2 마이그레이션에서 지웁니다.
+ * (제목과 메모가 자동 생성 그대로인 것만)
+ */
+const V1_STARTERS: Record<string, string> = {
+  '오픈 준비': '청소 · 재료 손질 · 냉장고 온도 기록',
+  '식자재 발주 확인': '재고 확인 후 부족한 것만 주문',
+  '주간 재고 점검': '선입선출 정리 · 개봉일 라벨 확인',
+  '마감 정산': '매출 확인 · 영수증 정리',
+}
+export function isV1Starter(e: Pick<ScheduleEvent, 'title' | 'memo'>): boolean {
+  return V1_STARTERS[e.title] !== undefined && V1_STARTERS[e.title] === e.memo
 }
 
 interface AppState {
@@ -102,6 +68,17 @@ interface AppState {
   questions: Question[]
   readNotifs: string[]
   lastLessonId?: string
+
+  /** 오늘 할 일: 루틴 켜기/끄기, 요일 변경, 직접 만든 루틴 */
+  routineOn: string[]
+  routineOff: string[]
+  routineWeekday: Record<string, number>
+  customRoutines: RoutineTemplate[]
+  /** 날짜별 완료한 항목 키 ('r:루틴id' | 'todo:할일id') */
+  taskDone: Record<string, string[]>
+  quickTodos: QuickTodo[]
+  challengeLog: ChallengeLogEntry[]
+  challengeShuffle: Record<string, number>
 
   completeOnboarding: (p: Profile) => void
   updateProfile: (p: Partial<Profile>) => void
@@ -126,6 +103,24 @@ interface AppState {
 
   markRead: (ids: string[]) => void
   resetAll: () => void
+
+  toggleTask: (date: string, key: string) => void
+  addTodo: (t: { title: string; slot: SlotId; date: string; challengeId?: string }) => string
+  updateTodo: (id: string, patch: Partial<Omit<QuickTodo, 'id'>>) => void
+  deleteTodo: (id: string) => void
+  setRoutineEnabled: (id: string, on: boolean) => void
+  setRoutineWeekday: (id: string, weekday: number) => void
+  addCustomRoutine: (r: Omit<RoutineTemplate, 'id' | 'custom'>) => void
+  deleteCustomRoutine: (id: string) => void
+  completeChallenge: (id: string, date: string, note?: string) => void
+  undoChallenge: (id: string, date: string) => void
+  shuffleChallenges: (date: string) => void
+}
+
+/** 최근 90일치만 남겨 저장 공간을 아낌 */
+function pruneDays<T>(map: Record<string, T>, today: string): Record<string, T> {
+  const from = addDays(today, -90)
+  return Object.fromEntries(Object.entries(map).filter(([d]) => d >= from))
 }
 
 const initial = () => ({
@@ -142,6 +137,14 @@ const initial = () => ({
   questions: seedQuestions(),
   readNotifs: [],
   lastLessonId: undefined,
+  routineOn: [],
+  routineOff: [],
+  routineWeekday: {},
+  customRoutines: [],
+  taskDone: {},
+  quickTodos: [],
+  challengeLog: [],
+  challengeShuffle: {},
 })
 
 export const useApp = create<AppState>()(
@@ -149,12 +152,7 @@ export const useApp = create<AppState>()(
     (set, get) => ({
       ...initial(),
 
-      completeOnboarding: (p) =>
-        set({
-          onboarded: true,
-          profile: p,
-          events: [...get().events, ...starterEvents(p, todayKey())],
-        }),
+      completeOnboarding: (p) => set({ onboarded: true, profile: p }),
       updateProfile: (p) => set({ profile: { ...get().profile, ...p } }),
       updateSettings: (s) => set({ settings: { ...get().settings, ...s } }),
 
@@ -299,11 +297,62 @@ export const useApp = create<AppState>()(
 
       markRead: (ids) => set({ readNotifs: Array.from(new Set([...get().readNotifs, ...ids])).slice(-300) }),
       resetAll: () => set(initial()),
+
+      toggleTask: (date, key) => {
+        const cur = get().taskDone[date] ?? []
+        const turningOn = !cur.includes(key)
+        const next = turningOn ? [...cur, key] : cur.filter((k) => k !== key)
+        let challengeLog = get().challengeLog
+        // 도전에서 만든 할 일이면 도전 기록도 함께
+        if (key.startsWith('todo:')) {
+          const todo = get().quickTodos.find((t) => `todo:${t.id}` === key)
+          if (todo?.challengeId) {
+            const cid = todo.challengeId
+            challengeLog = turningOn
+              ? challengeLog.some((l) => l.id === cid && l.date === date)
+                ? challengeLog
+                : [...challengeLog, { id: cid, date }]
+              : challengeLog.filter((l) => !(l.id === cid && l.date === date))
+          }
+        }
+        set({ taskDone: pruneDays({ ...get().taskDone, [date]: next }, todayKey()), challengeLog })
+      },
+      addTodo: ({ title, slot, date, challengeId }) => {
+        const id = uid('td')
+        set({ quickTodos: [...get().quickTodos, { id, title, slot, date, challengeId }] })
+        return id
+      },
+      updateTodo: (id, patch) => set({ quickTodos: get().quickTodos.map((t) => (t.id === id ? { ...t, ...patch } : t)) }),
+      deleteTodo: (id) => set({ quickTodos: get().quickTodos.filter((t) => t.id !== id) }),
+      setRoutineEnabled: (id, on) => {
+        const biz = get().profile.bizType
+        const tpl = ROUTINE_MAP[id]
+        const isDefault = tpl ? defaultOn(tpl, biz) : true // 직접 만든 루틴은 기본 켜짐
+        const without = (arr: string[]) => arr.filter((x) => x !== id)
+        if (isDefault) set({ routineOff: on ? without(get().routineOff) : [...without(get().routineOff), id] })
+        else set({ routineOn: on ? [...without(get().routineOn), id] : without(get().routineOn) })
+      },
+      setRoutineWeekday: (id, wd) => set({ routineWeekday: { ...get().routineWeekday, [id]: wd } }),
+      addCustomRoutine: (r) => set({ customRoutines: [...get().customRoutines, { ...r, id: uid('cr'), custom: true }] }),
+      deleteCustomRoutine: (id) =>
+        set({ customRoutines: get().customRoutines.filter((r) => r.id !== id), routineOff: get().routineOff.filter((x) => x !== id) }),
+      completeChallenge: (id, date, note) => {
+        if (get().challengeLog.some((l) => l.id === id && l.date === date)) return
+        set({ challengeLog: [...get().challengeLog, { id, date, note }] })
+      },
+      undoChallenge: (id, date) => set({ challengeLog: get().challengeLog.filter((l) => !(l.id === id && l.date === date)) }),
+      shuffleChallenges: (date) =>
+        set({ challengeShuffle: pruneDays({ ...get().challengeShuffle, [date]: (get().challengeShuffle[date] ?? 0) + 1 }, todayKey()) }),
     }),
     {
       name: 'golmok-app-v2',
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => localStorage),
+      migrate: (persisted, version) => {
+        const p = (persisted ?? {}) as Partial<AppState>
+        if (version < 2 && Array.isArray(p.events)) p.events = p.events.filter((e) => !isV1Starter(e))
+        return p as AppState
+      },
     },
   ),
 )

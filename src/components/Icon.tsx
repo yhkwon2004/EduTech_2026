@@ -1,5 +1,11 @@
 import {
   Award,
+  Trophy,
+  Target,
+  Sunset,
+  ShieldAlert,
+  Moon,
+  HeartPulse,
   CalendarDays,
   CircleAlert,
   Coffee,
@@ -34,6 +40,12 @@ import {
 /** 데이터에서 이름으로 참조하는 아이콘만 모아 번들 크기를 줄입니다 */
 const ICONS: Record<string, LucideIcon> = {
   Award,
+  Trophy,
+  Target,
+  Sunset,
+  ShieldAlert,
+  Moon,
+  HeartPulse,
   CalendarDays,
   CircleAlert,
   Coffee,
