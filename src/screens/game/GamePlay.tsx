@@ -92,6 +92,7 @@ export function GamePlay() {
     )
 
   const goods = g.products.filter((p) => p.kind === 'goods')
+  const suggested = suggestPlan({ products: g.products, lastDemand: last ? Object.fromEntries(last.products.map((p) => [p.id, p.demand])) : undefined, capacity: cap })
   const planCost = goods.reduce((s, p) => s + (decision.plan[p.id] ?? 0) * p.cost, 0)
   const planUnits = goods.reduce((s, p) => s + (decision.plan[p.id] ?? 0), 0)
   const mkCost = decision.marketing.reduce((s, m) => s + MARKETING[m].cost, 0)
@@ -258,7 +259,7 @@ export function GamePlay() {
             </div>
             {goods.map((p) => {
               const y = last?.products.find((x) => x.id === p.id)
-              const sug = suggestPlan({ products: [p], lastDemand: y ? { [p.id]: y.demand } : undefined, capacity: Math.round(cap / Math.max(1, goods.length)) * goods.length })[p.id]
+              const sug = suggested[p.id] ?? 0
               return (
                 <div key={p.id} className="rounded-[1.25rem] bg-white p-4 shadow-card">
                   <div className="flex items-center gap-3">
