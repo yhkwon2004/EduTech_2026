@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import type { BizType } from '@/types'
 import { useApp } from '@/store/app'
+import { useGame } from '@/game/store'
 import { BIZ_LABEL, BIZ_TYPES } from '@/data/categories'
 import { COURSE_MAP, LESSON_MAP } from '@/data/courses'
 import { badges, lastNDays, streak, totalMinutes } from '@/lib/stats'
@@ -54,6 +55,8 @@ export function My() {
   const bs = badges({ logs, progress, questions, events, today, challengeCount: challengeLog.length, routineChecks })
   const earned = bs.filter((b) => b.earned).length
   const [confirmReset, setConfirmReset] = useState(false)
+  const [confirmGame, setConfirmGame] = useState(false)
+  const game = useGame()
   const [importMsg, setImportMsg] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -283,6 +286,13 @@ export function My() {
             checked={settings.notify}
             onChange={setNotify}
           />
+          <SettingToggle
+            icon={<Store className="size-5 text-coral" />}
+            label="장사 게임 체험 모드"
+            desc="하루 한 번 제한 없이 연달아 장사해 볼 수 있어요 (테스트용)"
+            checked={game.fastPlay}
+            onChange={game.setFastPlay}
+          />
         </div>
       </section>
 
@@ -297,8 +307,17 @@ export function My() {
             color="text-coral bg-coral-50"
             label={confirmReset ? '한 번 더 누르면 모든 기록이 지워져요' : '모든 기록 초기화'}
             danger
-            onClick={() => (confirmReset ? state.resetAll() : setConfirmReset(true))}
+            onClick={() => (confirmReset ? (state.resetAll(), game.resetGame()) : setConfirmReset(true))}
           />
+          {game.started && (
+            <MenuRow
+              icon={<Store className="size-5" />}
+              color="text-coral bg-coral-50"
+              label={confirmGame ? '한 번 더 누르면 가게가 사라져요' : '장사 게임 처음부터 다시'}
+              danger
+              onClick={() => (confirmGame ? (game.resetGame(), setConfirmGame(false)) : setConfirmGame(true))}
+            />
+          )}
         </div>
         <input
           ref={fileRef}

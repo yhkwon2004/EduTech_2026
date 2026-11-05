@@ -87,7 +87,7 @@ export function useNotices(): Notice[] {
           .slice(0, 3)
           .map((i) => i.title)
           .join(' · '),
-        to: '/',
+        to: '/today',
       })
     }
     const mins = minutesByDate(logs)[today] ?? 0
@@ -97,7 +97,7 @@ export function useNotices(): Notice[] {
         kind: 'learn',
         title: mins === 0 ? '오늘 3분, 아직이에요' : `오늘 목표까지 ${goal - mins}분 남았어요`,
         body: '손님 없는 틈에 짧은 레슨 하나 어떠세요?',
-        to: '/',
+        to: '/today',
       })
     }
     if (review.length) {

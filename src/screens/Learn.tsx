@@ -1,5 +1,5 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { BookOpen, ChevronRight, NotebookPen, RotateCcw, Search } from 'lucide-react'
+import { BookOpen, ChevronRight, MessageCircleQuestionMark, NotebookPen, RotateCcw, Search } from 'lucide-react'
 import type { CategoryId } from '@/types'
 import { useApp } from '@/store/app'
 import { CATEGORIES } from '@/data/categories'
@@ -43,9 +43,14 @@ export function Learn() {
     <div className="pt-safe">
       <header className="flex items-center justify-between px-5 pb-2 pt-5">
         <h1 className="text-[1.625rem] font-extrabold tracking-tight">배움</h1>
-        <button aria-label="검색" onClick={() => nav('/search')} className="grid size-11 place-items-center rounded-full bg-white shadow-card">
-          <Search className="size-5" />
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => nav('/ask')} className="flex h-11 items-center gap-1.5 rounded-full bg-white px-4 text-[0.875rem] font-bold text-teal shadow-card">
+            <MessageCircleQuestionMark className="size-4.5" /> 궁금한 점
+          </button>
+          <button aria-label="검색" onClick={() => nav('/search')} className="grid size-11 place-items-center rounded-full bg-white shadow-card">
+            <Search className="size-5" />
+          </button>
+        </div>
       </header>
 
       <div className="mt-2 grid grid-cols-3 gap-2.5 px-5">

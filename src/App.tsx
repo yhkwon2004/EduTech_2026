@@ -5,18 +5,11 @@ import { BottomNav } from '@/components/BottomNav'
 import { Onboarding } from '@/screens/Onboarding'
 import { Home } from '@/screens/Home'
 import { Learn } from '@/screens/Learn'
-import { CourseDetail } from '@/screens/CourseDetail'
-import { LessonPlayer } from '@/screens/LessonPlayer'
-import { Review } from '@/screens/Review'
 import { Schedule } from '@/screens/Schedule'
 import { Ask } from '@/screens/Ask'
-import { AskForm } from '@/screens/AskForm'
-import { QuestionDetail } from '@/screens/QuestionDetail'
 import { My } from '@/screens/My'
-import { Notifications } from '@/screens/Notifications'
-import { Search } from '@/screens/Search'
-import { Challenges } from '@/screens/Challenges'
-import { Routines } from '@/screens/Routines'
+import { GameHub } from '@/screens/game/GameHub'
+import { GameRanking } from '@/screens/game/GameRanking'
 import { useReminders } from '@/lib/useReminders'
 
 function Gate() {
@@ -55,22 +48,29 @@ const router = createHashRouter([
       {
         element: <TabLayout />,
         children: [
-          { path: '/', element: <Home /> },
+          { path: '/', element: <GameHub /> },
+          { path: '/today', element: <Home /> },
+          { path: '/rank', element: <GameRanking /> },
           { path: '/learn', element: <Learn /> },
           { path: '/schedule', element: <Schedule /> },
           { path: '/ask', element: <Ask /> },
           { path: '/my', element: <My /> },
         ],
       },
-      { path: '/course/:id', element: <CourseDetail /> },
-      { path: '/lesson/:id', element: <LessonPlayer /> },
-      { path: '/review', element: <Review /> },
-      { path: '/ask/new', element: <AskForm /> },
-      { path: '/ask/:id', element: <QuestionDetail /> },
-      { path: '/notifications', element: <Notifications /> },
-      { path: '/search', element: <Search /> },
-      { path: '/challenges', element: <Challenges /> },
-      { path: '/routines', element: <Routines /> },
+      { path: '/course/:id', lazy: () => import('@/screens/CourseDetail').then((m) => ({ Component: m.CourseDetail })) },
+      { path: '/lesson/:id', lazy: () => import('@/screens/LessonPlayer').then((m) => ({ Component: m.LessonPlayer })) },
+      { path: '/review', lazy: () => import('@/screens/Review').then((m) => ({ Component: m.Review })) },
+      { path: '/ask/new', lazy: () => import('@/screens/AskForm').then((m) => ({ Component: m.AskForm })) },
+      { path: '/ask/:id', lazy: () => import('@/screens/QuestionDetail').then((m) => ({ Component: m.QuestionDetail })) },
+      { path: '/notifications', lazy: () => import('@/screens/Notifications').then((m) => ({ Component: m.Notifications })) },
+      { path: '/search', lazy: () => import('@/screens/Search').then((m) => ({ Component: m.Search })) },
+      { path: '/challenges', lazy: () => import('@/screens/Challenges').then((m) => ({ Component: m.Challenges })) },
+      { path: '/routines', lazy: () => import('@/screens/Routines').then((m) => ({ Component: m.Routines })) },
+      { path: '/game/setup', lazy: () => import('@/screens/game/GameSetup').then((m) => ({ Component: m.GameSetup })) },
+      { path: '/game/play', lazy: () => import('@/screens/game/GamePlay').then((m) => ({ Component: m.GamePlay })) },
+      { path: '/game/result', lazy: () => import('@/screens/game/GameResult').then((m) => ({ Component: m.GameResult })) },
+      { path: '/game/products', lazy: () => import('@/screens/game/GameProducts').then((m) => ({ Component: m.GameProducts })) },
+      { path: '/game/invest', lazy: () => import('@/screens/game/GameInvest').then((m) => ({ Component: m.GameInvest })) },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

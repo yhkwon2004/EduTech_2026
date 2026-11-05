@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CalendarDays, Check, Headphones, MessageCircleQuestionMark, Sparkles, Timer } from 'lucide-react'
+import { CalendarDays, Check, Headphones, Sparkles, Timer } from 'lucide-react'
 import type { BizType, CategoryId, Profile } from '@/types'
 import { BIZ_TYPES, CATEGORIES } from '@/data/categories'
 import { useApp } from '@/store/app'
@@ -8,16 +8,16 @@ import { cx, PrimaryButton } from '@/components/ui'
 
 const SLIDES = [
   {
-    title: '일하는 틈틈이,\n3분이면 충분해요',
-    body: '손님 없는 시간에 짧게 배우고, 손이 바쁠 땐 귀로 들어요. 세금·마케팅·응대까지 사장님에게 필요한 것만.',
+    title: '우리 동네 장사왕,\n매일 한 판!',
+    body: '주변 가게 7곳과 경쟁해요. 생산·가격·홍보를 정하고 하루 장사를 하면 동네 랭킹이 나와요. 동네 → 구 → 시·도 최고의 소상공인까지!',
   },
   {
-    title: '오늘 할 일,\n시간대별로 챙겨요',
-    body: '오픈 전부터 마감까지 가게 루틴을 시간대별로. 쉬는 시간·점심 틈엔 작은 도전 하나, 세금 기한은 미리 알려 드려요.',
+    title: '오늘 할 일,\n하면 할수록 강해져요',
+    body: '오픈 전부터 마감까지 실제 가게 루틴을 시간대별로 챙겨요. 실제로 한 만큼 게임 속 손님도 늘어나요.',
   },
   {
-    title: '궁금한 건\n바로 물어보세요',
-    body: '자주 묻는 질문에서 바로 답을 찾고, 동네 사장님들과 경험을 나눠요.',
+    title: '3분 배우면\n가게가 강해져요',
+    body: '레슨을 끝낼 때마다 노하우 레벨이 올라 게임 효과가 커져요. 손이 바쁠 땐 귀로 듣고, 궁금한 건 바로 물어보세요.',
   },
 ]
 
@@ -28,7 +28,7 @@ function Illustration({ step }: { step: number }) {
       <div className="absolute left-8 top-10 size-4 rounded-full bg-sun" />
       <div className="absolute bottom-12 right-6 size-6 rounded-full bg-coral/80" />
       <div className="absolute right-14 top-6 size-3 rounded-full bg-teal" />
-      {step === 0 && (
+      {step === 2 && (
         <>
           <div className="absolute left-1/2 top-1/2 w-[11rem] -translate-x-1/2 -translate-y-1/2 animate-pop rounded-[28px] bg-white p-5 shadow-card">
             <div className="flex items-center gap-2 text-[0.75rem] font-bold text-primary">
@@ -72,17 +72,25 @@ function Illustration({ step }: { step: number }) {
           </div>
         </>
       )}
-      {step === 2 && (
+      {step === 0 && (
         <>
-          <div className="absolute left-4 top-[84px] max-w-[190px] animate-pop rounded-[20px] rounded-bl-md bg-white px-4 py-3 text-[0.8125rem] font-semibold shadow-card">
-            알바도 근로계약서 써야 하나요?
+          <div className="absolute left-1/2 top-1/2 w-[13rem] -translate-x-1/2 -translate-y-1/2 animate-pop">
+            <div className="flex items-end justify-center gap-2">
+              {[
+                ['🥐', 'h-14', 'from-[#C7D2E3] to-[#9AA8BF]', 2],
+                ['🏠', 'h-20', 'from-sun to-[#F5A623]', 1],
+                ['☕', 'h-10', 'from-[#F2B48A] to-[#D9824B]', 3],
+              ].map(([e, h, c, n]) => (
+                <div key={n as number} className="flex w-16 flex-col items-center">
+                  {n === 1 && <span className="text-[1.25rem]">👑</span>}
+                  <span className={cx('grid size-12 place-items-center rounded-full bg-white text-[1.5rem] shadow-card', n === 1 && 'ring-4 ring-primary')}>{e}</span>
+                  <div className={cx('mt-1 grid w-full place-items-center rounded-t-2xl bg-gradient-to-b text-[1.125rem] font-extrabold text-white', h as string, c as string)}>{n}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="absolute right-4 top-[150px] max-w-[200px] animate-pop rounded-[20px] rounded-br-md bg-primary px-4 py-3 text-[0.8125rem] font-semibold text-white shadow-float">
-            네, 근로시간과 관계없이 서면으로 쓰고 한 부를 줘요.
-          </div>
-          <div className="absolute bottom-10 left-10 grid size-12 place-items-center rounded-2xl bg-teal text-white shadow-card">
-            <MessageCircleQuestionMark className="size-6" />
-          </div>
+          <div className="absolute right-0 top-12 rounded-full bg-white px-3 py-2 text-[0.75rem] font-bold text-coral shadow-card">오늘 2위 → 1위 ▲</div>
+          <div className="absolute bottom-10 left-0 rounded-full bg-ink px-3 py-2 text-[0.75rem] font-bold text-white shadow-card">망원동 골목 리그</div>
         </>
       )}
     </div>

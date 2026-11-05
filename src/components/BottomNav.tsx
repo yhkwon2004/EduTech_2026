@@ -2,26 +2,27 @@ import { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   BookOpen,
-  CalendarDays,
+  Crown,
+  Store,
   CalendarPlus,
   ListChecks,
   ListPlus,
   MessageCircleQuestionMark,
   Plus,
-  RotateCcw,
   Timer,
   Trophy,
   type LucideIcon,
 } from 'lucide-react'
 import { cx, Sheet } from './ui'
 import { useApp } from '@/store/app'
+import { useGame } from '@/game/store'
 import { recommendLessons } from '@/lib/recommend'
 
 const TABS: { to: string; label: string; icon: LucideIcon }[] = [
-  { to: '/', label: '오늘', icon: ListChecks },
+  { to: '/', label: '내 가게', icon: Store },
+  { to: '/today', label: '오늘', icon: ListChecks },
   { to: '/learn', label: '배움', icon: BookOpen },
-  { to: '/schedule', label: '일정', icon: CalendarDays },
-  { to: '/ask', label: '질문', icon: MessageCircleQuestionMark },
+  { to: '/rank', label: '랭킹', icon: Crown },
 ]
 
 function Tab({ to, label, icon: I }: (typeof TABS)[number]) {
@@ -51,7 +52,7 @@ export function BottomNav() {
   useEffect(() => setOpen(false), [pathname])
   const progress = useApp((s) => s.progress)
   const interests = useApp((s) => s.profile.interests)
-  const reviewCount = useApp((s) => s.review.length)
+  const gameStarted = useGame((s) => s.started)
   const rec = recommendLessons({ minutes: 3, interests, progress, limit: 1 })[0]
 
   const go = (to: string) => {
@@ -83,11 +84,18 @@ export function BottomNav() {
       <Sheet open={open} onClose={() => setOpen(false)} title="빠른 실행">
         <div className="grid grid-cols-2 gap-3 pb-2">
           <QuickItem
+            icon={<Store className="size-6" />}
+            color="bg-coral text-white"
+            title="오늘 장사하기"
+            desc="생산·가격·홍보 정하고 영업"
+            onClick={() => go(gameStarted ? '/game/play' : '/game/setup')}
+          />
+          <QuickItem
             icon={<ListPlus className="size-6" />}
             color="bg-ink text-white"
             title="할 일 추가"
             desc="지금 시간대에 바로"
-            onClick={() => go('/?add=1')}
+            onClick={() => go('/today?add=1')}
           />
           <QuickItem
             icon={<Trophy className="size-6" />}
@@ -117,13 +125,7 @@ export function BottomNav() {
             desc="궁금한 점 바로 찾기"
             onClick={() => go('/ask/new')}
           />
-          <QuickItem
-            icon={<RotateCcw className="size-6" />}
-            color="bg-coral-50 text-coral"
-            title="틀린 문제 복습"
-            desc={reviewCount ? `${reviewCount}문제 남았어요` : '복습할 문제가 없어요'}
-            onClick={() => go('/review')}
-          />
+
         </div>
       </Sheet>
     </>

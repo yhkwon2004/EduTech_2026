@@ -14,7 +14,7 @@ import {
   MessageCircle,
   Play,
   Plus,
-  Search,
+  CalendarDays,
   Settings2,
   Shuffle,
   ThumbsUp,
@@ -176,8 +176,8 @@ export function Home() {
           <h1 className="mt-1 truncate text-[1.625rem] font-extrabold tracking-tight">{profile.name} 사장님</h1>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <button aria-label="검색" onClick={() => nav('/search')} className="grid size-11 place-items-center rounded-full bg-white text-ink shadow-card">
-            <Search className="size-5" />
+          <button aria-label="일정" onClick={() => nav('/schedule')} className="grid size-11 place-items-center rounded-full bg-white text-ink shadow-card">
+            <CalendarDays className="size-5" />
           </button>
           <button
             aria-label={`알림 ${unread}개`}

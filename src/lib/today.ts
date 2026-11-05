@@ -14,6 +14,7 @@ import { SLOTS } from '@/data/routines'
 import { CHALLENGES, RANKS } from '@/data/challenges'
 import { defaultOn } from '@/data/routines'
 import { addDays, fromKey, minToTime, timeToMin, weekday } from './date'
+import { hash, rng } from './rng'
 
 export interface SlotRange {
   id: SlotId
@@ -213,26 +214,6 @@ export function carryOverTodos(todos: QuickTodo[], taskDone: Record<string, stri
 }
 
 /* ───────── 오늘의 도전 ───────── */
-
-function hash(s: string): number {
-  let h = 2166136261
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i)
-    h = Math.imul(h, 16777619)
-  }
-  return h >>> 0
-}
-
-function rng(seed: number) {
-  let a = seed
-  return () => {
-    a |= 0
-    a = (a + 0x6d2b79f5) | 0
-    let t = Math.imul(a ^ (a >>> 15), 1 | a)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
 
 /**
  * 하루 3개 — ① 관심 분야 ② 다른 분야 ③ 1~2분짜리 또는 컨디션 챙기기

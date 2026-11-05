@@ -179,3 +179,14 @@ describe('content integrity', () => {
     for (const f of FAQS) if (f.lessonId) expect(LESSON_MAP[f.lessonId]).toBeDefined()
   })
 })
+
+import { josa } from '@/lib/josa'
+describe('josa', () => {
+  it('picks particles by final consonant', () => {
+    expect(josa('지도 앱 광고', '을/를')).toBe('지도 앱 광고를')
+    expect(josa('SNS 게시물', '을/를')).toBe('SNS 게시물을')
+    expect(josa('망원 국밥', '이/가')).toBe('망원 국밥이')
+    expect(josa('달빛 카페', '이/가')).toBe('달빛 카페가')
+    expect(josa('서울', '으로/로')).toBe('서울로')
+  })
+})
