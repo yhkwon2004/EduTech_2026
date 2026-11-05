@@ -4,3 +4,9 @@ dist
 .DS_Store
 coverage
 *.tsbuildinfo
+.env
+.env.*
+!.env.example
+.vercel/
+test-results/
+playwright-report/
