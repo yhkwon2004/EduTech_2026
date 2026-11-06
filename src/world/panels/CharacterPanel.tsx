@@ -44,7 +44,7 @@ export function Turntable({ look, size = 190, controls = true }: { look: Look; s
   const drag = useRef<{ x: number; yaw: number } | null>(null)
   useEffect(() => {
     if (!spin) return
-    const t = setInterval(() => setYaw((y) => y + 7.5), 90)
+    const t = setInterval(() => setYaw((y) => y + 90), 1100)
     return () => clearInterval(t)
   }, [spin])
   useEffect(() => {
@@ -57,13 +57,13 @@ export function Turntable({ look, size = 190, controls = true }: { look: Look; s
     setActKey((k) => k + 1)
   }
   const act: Act | null = motion === 'idle' || motion === 'walk' ? null : motion
-  const quant = Math.round(yaw / 7.5) * 7.5
+  const quant = yaw
   return (
     <div className="flex flex-col items-center gap-1.5">
       <svg
         width={size}
         height={size * 1.1}
-        viewBox="-34 -78 68 84"
+        viewBox="-34 -76 68 82"
         className="touch-none select-none rounded-3xl bg-gradient-to-b from-[#D6F1FF] via-[#BCE6FA] to-[#9AD6F2] shadow-inner"
         onPointerDown={(e) => {
           ;(e.target as Element).setPointerCapture?.(e.pointerId)
@@ -87,13 +87,13 @@ export function Turntable({ look, size = 190, controls = true }: { look: Look; s
       {controls && (
         <>
           <div className="flex items-center gap-1">
-            <button aria-label="왼쪽으로 돌리기" onClick={() => (setSpin(false), setYaw((y) => y - 45))} className="grid size-8 place-items-center rounded-xl bg-black/5 text-[0.875rem] font-black">
+            <button aria-label="왼쪽으로 돌리기" onClick={() => (setSpin(false), setYaw((y) => y - 90))} className="grid size-8 place-items-center rounded-xl bg-black/5 text-[0.875rem] font-black">
               ⟲
             </button>
             <button aria-label={spin ? '회전 멈춤' : '자동 회전'} onClick={() => setSpin(!spin)} className="grid size-8 place-items-center rounded-xl bg-black/5">
               {spin ? <Pause className="size-4" /> : <Play className="size-4" />}
             </button>
-            <button aria-label="오른쪽으로 돌리기" onClick={() => (setSpin(false), setYaw((y) => y + 45))} className="grid size-8 place-items-center rounded-xl bg-black/5 text-[0.875rem] font-black">
+            <button aria-label="오른쪽으로 돌리기" onClick={() => (setSpin(false), setYaw((y) => y + 90))} className="grid size-8 place-items-center rounded-xl bg-black/5 text-[0.875rem] font-black">
               ⟳
             </button>
           </div>
@@ -122,8 +122,8 @@ export function Turntable({ look, size = 190, controls = true }: { look: Look; s
 /* ───────── 꾸미기 ───────── */
 function MiniHead({ look }: { look: Look }) {
   return (
-    <svg width={38} height={38} viewBox="-18 -59 36 35" aria-hidden>
-      <CharacterArt look={look} part="head" yaw={14} pose="idle" />
+    <svg width={38} height={38} viewBox="-17 -56 34 34" aria-hidden>
+      <CharacterArt look={look} part="head" yaw={30} pose="idle" />
     </svg>
   )
 }
@@ -320,11 +320,10 @@ export function CharacterSheet({ look, name, subtitle }: { look: Look; name: str
   const W = 1000
   const H = 650
   const views = [
-    [0, '정면'],
-    [45, '앞 3/4'],
-    [90, '옆모습'],
-    [135, '뒤 3/4'],
-    [180, '뒷모습'],
+    [30, '앞 · 오른쪽'],
+    [-30, '앞 · 왼쪽'],
+    [-150, '뒤 · 왼쪽'],
+    [150, '뒤 · 오른쪽'],
   ] as const
   const exprs: [Expr, string][] = [
     ['normal', '기본'],
@@ -354,9 +353,9 @@ export function CharacterSheet({ look, name, subtitle }: { look: Look; name: str
     ['입', `${MOUTHS[look.mouth]}${look.blush ? ' · 볼터치' : ''}`],
     ['모자 · 안경', `${HATS[look.hat]} · ${GLASSES[look.glasses]}`],
     ['옷', `${TOPS[look.top]} · ${BOTTOMS[look.bottom]}`],
-    ['역할 의상', look.role === 'owner' ? '사장님 앞치마' : look.role === 'employee' ? '셔츠 깃 · 넥타이 · 사원증' : '평상복'],
+    ['역할 의상', look.role === 'owner' ? '사장님 앞치마' : look.role === 'employee' ? '넥타이 · 사원증' : '평상복'],
   ]
-  const s1 = 2.85
+  const s1 = 3.4
   const base = 316
   return (
     <div>
@@ -401,9 +400,9 @@ export function CharacterSheet({ look, name, subtitle }: { look: Look; name: str
         {/* 비율 안내선 */}
         {[
           [base, '발'],
-          [base - 16.2 * s1, '허리'],
-          [base - 31 * s1, '어깨'],
-          [base - 57 * s1, '머리 끝'],
+          [base - 13 * s1, '허리'],
+          [base - 24.7 * s1, '어깨'],
+          [base - 54.6 * s1, '머리 끝'],
         ].map(([yy, label]) => (
           <g key={label as string}>
             <line x1={70} x2={W - 30} y1={yy as number} y2={yy as number} stroke="#C9B48C" strokeDasharray="5 5" strokeWidth={1} />
@@ -414,9 +413,9 @@ export function CharacterSheet({ look, name, subtitle }: { look: Look; name: str
         ))}
         {views.map(([yaw, label], i) => (
           <g key={label}>
-            <Fig x={170 + i * 180} y={base} look={look} s={s1} yaw={yaw} />
-            <T x={170 + i * 180} y={base + 20} size={12} w={800} anchor="middle" fill="#5B4A30">
-              {label} {yaw}°
+            <Fig x={200 + i * 215} y={base} look={look} s={s1} yaw={yaw} />
+            <T x={200 + i * 215} y={base + 20} size={12} w={800} anchor="middle" fill="#5B4A30">
+              {label}
             </T>
           </g>
         ))}
@@ -425,9 +424,9 @@ export function CharacterSheet({ look, name, subtitle }: { look: Look; name: str
           표정
         </T>
         {exprs.map(([e, label], i) => (
-          <g key={e} transform={`translate(${112 + i * 86},${352 + 40.6 * 1.9 + 34})`}>
-            <circle cx={0} cy={-40.6 * 1.9} r={36} fill="#F4EEFF" />
-            <CharacterArt look={look} part="head" yaw={i === 4 ? 25 : 0} pose="idle" expr={e} scale={1.9} />
+          <g key={e} transform={`translate(${112 + i * 86},${352 + 37.7 * 1.9 + 34})`}>
+            <circle cx={0} cy={-37.7 * 1.9} r={36} fill="#F4EEFF" />
+            <CharacterArt look={look} part="head" yaw={i % 2 ? -30 : 30} pose="idle" expr={e} scale={1.9} />
             <T x={0} y={-22} size={11} w={800} anchor="middle" fill="#5B4A30">
               {label}
             </T>
@@ -475,7 +474,7 @@ export function CharacterSheet({ look, name, subtitle }: { look: Look; name: str
           </g>
         ))}
         <T x={530} y={622} size={10} w={600} fill="#A99A80">
-          도트 픽셀아트 · 16방향 · 걷기/대기/인사/환호/작업/기지개/하품 프레임 애니메이션 · 눈 깜빡임
+          손으로 찍은 도트 원화 · 4방향 · 걷기/대기/인사/환호/작업/기지개/하품 프레임 애니메이션 · 눈 깜빡임
         </T>
       </svg>
     </div>
@@ -536,7 +535,7 @@ export function CastSheet({ me }: { me: { look: Look; name: string; title: strin
           )
         })}
         <T x={W / 2} y={398} size={10.5} w={600} anchor="middle" fill="#A99A80">
-          모든 캐릭터는 같은 도트 리그로 만들어져 16방향으로 몸을 돌리고, 걷기·인사·말하기 동작을 해요.
+          모든 캐릭터는 같은 손 도트 원화에 색만 바꿔 입혀 4방향으로 움직이고, 걷기·인사·말하기 동작을 해요.
         </T>
       </svg>
     </div>

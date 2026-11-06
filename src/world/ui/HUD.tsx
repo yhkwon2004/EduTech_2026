@@ -24,8 +24,8 @@ export function Avatar({ size = 44 }: { size?: number }) {
   const w = useWorld()
   const look = useMemo(() => toLook(w.avatar, w.path === 'employee' ? 'employee' : 'owner'), [w.avatar, w.path])
   return (
-    <svg width={size} height={size} viewBox="-19 -60 38 37" className="shrink-0 rounded-full bg-gradient-to-b from-[#BDE8FF] to-[#8FD0F5]">
-      <CharacterArt look={look} part="head" yaw={14} />
+    <svg width={size} height={size} viewBox="-18 -57 36 36" className="shrink-0 rounded-full bg-gradient-to-b from-[#BDE8FF] to-[#8FD0F5]">
+      <CharacterArt look={look} part="head" yaw={30} />
     </svg>
   )
 }
