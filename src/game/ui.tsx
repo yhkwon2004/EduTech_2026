@@ -1,5 +1,5 @@
 import { Star } from 'lucide-react'
-import { cx } from '@/components/ui'
+import { cx } from '@/world/ui/kit'
 
 /** 12,345,000 → "1,234.5만" 같은 짧은 원화 표기 */
 export function won(n: number, opts: { sign?: boolean } = {}): string {

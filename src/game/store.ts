@@ -41,7 +41,7 @@ export interface GameState {
   start: (p: { shopName: string; shopEmoji: string; color: string; biz: BizType; region: Region; products: Omit<Product, 'id' | 'stock'>[] }) => void
   saveProduct: (p: Omit<Product, 'id' | 'stock'> & { id?: string }) => void
   removeProduct: (id: string) => void
-  play: (decision: DayDecision, ctx: { skills: Skills; buff: number; lessonsToday: number }) => DayResult
+  play: (decision: DayDecision, ctx: { skills: Skills; buff: number; lessonsToday: number; prepaid?: boolean }) => DayResult
   buy: (kind: keyof typeof UPGRADES, discount: number) => boolean
   train: (productId: string, discount: number) => boolean
   claim: (chapterId: string) => void
@@ -149,6 +149,7 @@ export const useGame = create<GameState>()(
           shopName: g.shopName,
           shopEmoji: g.shopEmoji,
           prevRank: prev?.rank,
+          prepaid: ctx.prepaid,
         })
         const dayInSeason = g.dayInSeason + 1
         const seasonScore = g.seasonScore + out.result.score

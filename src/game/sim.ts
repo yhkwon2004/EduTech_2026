@@ -213,6 +213,8 @@ export interface SimInput {
   shopEmoji?: string
   /** 어제 내 순위 — 상위권이면 경쟁 가게가 견제해요 */
   prevRank?: number
+  /** 공방에서 미리 만든 재고를 진열(재료비는 이미 냄): 현금에서는 빼지 않고 이익 계산에만 원가로 반영 */
+  prepaid?: boolean
 }
 
 export interface SimOutput {
@@ -291,11 +293,12 @@ export function simulateDay(input: SimInput): SimOutput {
   const costMul = clamp(1 + (eff.cost ?? 0) - 0.03 * (skills.ops ?? 0), 0.7, 1.5)
   // 재료는 가진 돈 안에서만 살 수 있어요
   const wantCost = priced.reduce((sum, p) => sum + (p.kind === 'goods' ? Math.max(0, decision.plan[p.id] ?? 0) * p.cost * costMul : 0), 0)
-  const afford = wantCost > 0 ? clamp(Math.max(0, stats.cash) / wantCost, 0, 1) : 1
+  const afford = input.prepaid ? 1 : wantCost > 0 ? clamp(Math.max(0, stats.cash) / wantCost, 0, 1) : 1
   const results: ProductResult[] = []
   const nextProducts: Product[] = []
   let revenue = 0
   let ingredients = 0
+  let servicesCost = 0
   let wasteValue = 0
   let unmetUnits = 0
   let madeTotal = 0
@@ -308,6 +311,7 @@ export function simulateDay(input: SimInput): SimOutput {
     if (p.kind === 'service') {
       sold = demand
       ingredients += sold * p.cost * costMul
+      servicesCost += sold * p.cost * costMul
     } else {
       made = Math.max(0, Math.floor((decision.plan[p.id] ?? 0) * afford))
       const available = made + (p.perishable ? 0 : p.stock)
@@ -425,7 +429,8 @@ export function simulateDay(input: SimInput): SimOutput {
 
   const nextStats: ShopStats = {
     ...stats,
-    cash: Math.round(stats.cash + profit),
+    // 미리 낸 재료비(진열한 재고 원가)는 현금에서 다시 빼지 않아요
+    cash: Math.round(stats.cash + profit + (input.prepaid ? ingredients - servicesCost : 0)),
     reputation: Math.round(reputation * 100) / 100,
     awareness: Math.round(awareness * 10) / 10,
     totalProfit: stats.totalProfit + profit,

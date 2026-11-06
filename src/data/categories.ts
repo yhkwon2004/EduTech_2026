@@ -1,4 +1,4 @@
-import type { BizType, CategoryId, EventType } from '@/types'
+import type { BizType, CategoryId } from '@/types'
 
 export interface CategoryMeta {
   id: CategoryId
@@ -98,39 +98,3 @@ export const BIZ_TYPES: { id: BizType; label: string; icon: string }[] = [
 ]
 
 export const BIZ_LABEL = Object.fromEntries(BIZ_TYPES.map((b) => [b.id, b.label])) as Record<BizType, string>
-
-/** 업종별로 손님이 뜸한 '보통의' 틈새 시간대 (일정이 비어 있을 때 추천용) */
-export const TYPICAL_LULLS: Record<BizType, { start: string; end: string; label: string }[]> = {
-  food: [
-    { start: '10:30', end: '11:00', label: '오픈 준비 마무리 후' },
-    { start: '14:30', end: '16:30', label: '점심 피크 끝난 브레이크' },
-  ],
-  cafe: [
-    { start: '10:30', end: '11:30', label: '출근 손님 빠진 오전' },
-    { start: '15:00', end: '17:00', label: '오후 한산한 시간' },
-  ],
-  retail: [
-    { start: '10:00', end: '11:30', label: '오전 진열 끝난 뒤' },
-    { start: '14:00', end: '16:00', label: '오후 한산한 시간' },
-  ],
-  beauty: [
-    { start: '12:30', end: '13:30', label: '예약 사이 점심 무렵' },
-    { start: '16:00', end: '17:00', label: '오후 예약 공백' },
-  ],
-  service: [
-    { start: '09:30', end: '10:00', label: '출장 나가기 전' },
-    { start: '13:00', end: '14:00', label: '점심 이후' },
-  ],
-  etc: [
-    { start: '10:30', end: '11:00', label: '오전 업무 사이' },
-    { start: '15:00', end: '16:00', label: '오후 한산한 시간' },
-  ],
-}
-
-export const EVENT_TYPES: Record<EventType, { label: string; color: string; soft: string; icon: string }> = {
-  store: { label: '매장업무', color: '#176FF2', soft: '#EEF4FF', icon: 'Store' },
-  order: { label: '발주·거래처', color: '#FF8A3D', soft: '#FFF2E8', icon: 'Truck' },
-  learn: { label: '틈새학습', color: '#7B61FF', soft: '#F1EEFF', icon: 'GraduationCap' },
-  deadline: { label: '신고·마감', color: '#F83758', soft: '#FFF0F3', icon: 'CircleAlert' },
-  personal: { label: '개인', color: '#167F71', soft: '#E8F6F3', icon: 'Sun' },
-}

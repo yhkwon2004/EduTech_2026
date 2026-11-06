@@ -1,15 +1,20 @@
 {
-  "name": "골목배움 - 사장님 틈새 학습",
-  "short_name": "골목배움",
-  "description": "일하는 틈틈이 3분 사업 교육, 일정 정리, 궁금한 점 해결",
+  "name": "골목 장사왕 - 우리 동네 사업 성장기",
+  "short_name": "골목 장사왕",
+  "description": "텃밭·공방·가게·회사가 있는 마을에서 3분 레슨으로 진짜 장사를 배우는 체험형 사업 게임",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#F5F9FF",
+  "orientation": "landscape",
+  "background_color": "#5BBDE9",
   "theme_color": "#176FF2",
   "lang": "ko",
   "icons": [
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }
