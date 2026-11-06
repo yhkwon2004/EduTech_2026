@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { emote } from '../emote'
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Heart, MessageCircle, Phone, Search, Send, Volume2, VolumeX } from 'lucide-react'
 import type { CategoryId, Course, Lesson } from '@/types'
 import { COURSES, COURSE_MAP, LESSON_MAP } from '@/data/courses'
@@ -72,6 +73,7 @@ function LessonView({ lesson, course, onBack, onDone }: { lesson: Lesson; course
     setReward({ first, score })
     setPhase('done')
     toast(first ? '레슨 완료! +30 EXP · 체력 +5' : '복습 완료! +8 EXP · 체력 +2', 'good')
+    emote(score >= 50 ? 'cheer' : 'nod', '📚')
   }
 
   const kindLabel = { concept: '개념', tip: '실전 팁', example: '예시', check: '체크리스트' }[card?.kind ?? 'concept']

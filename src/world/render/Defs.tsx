@@ -101,6 +101,13 @@ export function WorldDefs() {
         <stop offset="0.4" stopColor="#FFFFFF" stopOpacity="0.05" />
         <stop offset="1" stopColor="#000000" stopOpacity="0.28" />
       </radialGradient>
+      <linearGradient id="m-cyl" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.2" />
+        <stop offset="0.32" stopColor="#FFFFFF" stopOpacity="0.06" />
+        <stop offset="0.62" stopColor="#140A28" stopOpacity="0" />
+        <stop offset="0.9" stopColor="#140A28" stopOpacity="0.2" />
+        <stop offset="1" stopColor="#140A28" stopOpacity="0.3" />
+      </linearGradient>
       {/* 나무 잎 */}
       <radialGradient id="m-leaf" cx="0.35" cy="0.3" r="0.75">
         <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.32" />

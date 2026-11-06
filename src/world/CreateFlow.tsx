@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { SIDO, LEAGUE_NAME } from '@/game/data'
 import { useWorld, type Avatar } from './store'
-import { AvatarEditor, CharacterPreview } from './panels/MiscPanels'
+import { CharacterEditor } from './panels/CharacterPanel'
+import { DEFAULT_AVATAR } from './avatar'
 import { cx, GameButton, toast } from './ui/kit'
 import type { Path } from './quests'
 
@@ -13,7 +14,7 @@ export function CreateFlow() {
   const create = useWorld((s) => s.create)
   const [step, setStep] = useState(-1)
   const [name, setName] = useState('')
-  const [avatar, setAvatar] = useState<Avatar>({ hair: 0, hairColor: '#3B2A20', outfit: '#F25C54', skin: '#FFD9B8' })
+  const [avatar, setAvatar] = useState<Avatar>({ ...DEFAULT_AVATAR })
   const [region, setRegion] = useState({ sido: '서울', gu: '마포구', dong: '망원동' })
   const [path, setPath] = useState<Path>('owner')
 
@@ -61,21 +62,7 @@ export function CreateFlow() {
         </div>
 
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-3">
-          {step === 0 && (
-            <div className="grid h-full items-center gap-4 sm:grid-cols-[auto_1fr]">
-              <div className="flex flex-col items-center">
-                <CharacterPreview look={avatar} role={path === 'employee' ? 'employee' : 'owner'} size={150} />
-                <p className="mt-1 text-[1rem] font-black">{name || '이름을 지어 주세요'}</p>
-              </div>
-              <div className="space-y-2.5">
-                <label className="block">
-                  <span className="text-[0.75rem] font-black text-sub">이름 (닉네임)</span>
-                  <input value={name} onChange={(e) => setName(e.target.value)} maxLength={8} placeholder="예: 김사장" className="mt-1 h-11 w-full rounded-xl border-2 border-black/10 bg-white px-3 text-[1rem] font-black outline-none focus:border-primary" />
-                </label>
-                <AvatarEditor look={avatar} onChange={(l) => setAvatar({ ...avatar, ...l })} />
-              </div>
-            </div>
-          )}
+          {step === 0 && <CharacterEditor value={avatar} onChange={setAvatar} role={path === 'employee' ? 'employee' : 'owner'} name={name} onName={setName} />}
 
           {step === 1 && (
             <div className="grid gap-3 sm:grid-cols-[1fr_15rem]">

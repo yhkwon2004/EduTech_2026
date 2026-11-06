@@ -7,6 +7,7 @@ import { canPromote, RANKS, type JobId } from './jobs'
 import { PLOT_MAP } from './map'
 import type { Path } from './quests'
 import { LOAN } from './support'
+import { DEFAULT_AVATAR, type Avatar } from './avatar'
 
 export interface PlotState {
   crop?: string
@@ -31,12 +32,7 @@ export interface JobState {
   history: { date: string; perf: number; pay: number }[]
 }
 
-export interface Avatar {
-  hair: number
-  hairColor: string
-  outfit: string
-  skin: string
-}
+export type { Avatar } from './avatar'
 
 const ENERGY_MS = 90_000
 
@@ -146,7 +142,7 @@ export interface WorldState {
 const initial = () => ({
   created: false,
   name: '',
-  avatar: { hair: 0, hairColor: '#3B2A20', outfit: '#176FF2', skin: '#FFD9B8' },
+  avatar: { ...DEFAULT_AVATAR } as Avatar,
   region: { sido: '서울', gu: '마포구', dong: '망원동' },
   path: null as Path | null,
   fromEmployee: false,
@@ -415,7 +411,21 @@ export const useWorld = create<WorldState>()(
         reset: () => set({ ...initial(), energyAt: Date.now() }),
       }
     },
-    { name: 'golmok-world-v1', version: 1, storage: createJSONStorage(() => localStorage) },
+    {
+      name: 'golmok-world-v1',
+      version: 2,
+      storage: createJSONStorage(() => localStorage),
+      // v2: 꾸미기 항목이 늘었어요. 예전 '모자' 머리는 짧은 머리 + 야구모자로
+      migrate: (persisted, version) => {
+        const p = { ...((persisted ?? {}) as Record<string, unknown>) }
+        if (version < 2 && p.avatar) {
+          const a = { ...(p.avatar as Avatar) }
+          if (a.hair === 3) Object.assign(a, { hair: 0, hat: 1 })
+          p.avatar = { ...DEFAULT_AVATAR, ...a }
+        }
+        return p as unknown as WorldState
+      },
+    },
   ),
 )
 

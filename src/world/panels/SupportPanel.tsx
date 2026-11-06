@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { emote } from '../emote'
 import { Check, Lock, X } from 'lucide-react'
 import { LESSON_MAP } from '@/data/courses'
 import { todayKey } from '@/lib/date'
@@ -82,6 +83,7 @@ function GrantQuiz({ grant, onBack, openLesson }: { grant: GrantDef; onBack: () 
                 if (pass) {
                   w.grant(grant.id, grant.amount)
                   toast(`지원금 +${won(grant.amount)}원!`, 'level')
+                  emote('cheer', '💰')
                 }
                 setDone(pass)
               }

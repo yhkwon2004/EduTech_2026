@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { toLook } from '../avatar'
 import { Backpack, Crown, Footprints, Gift, LocateFixed, Minus, Plus, ScrollText, Settings, Zap } from 'lucide-react'
 import { useWorld, energyNow, levelOf, maxEnergy } from '../store'
 import { useGame } from '@/game/store'
@@ -21,14 +22,15 @@ function weatherToday(date: string) {
 
 export function Avatar({ size = 44 }: { size?: number }) {
   const w = useWorld()
+  const look = useMemo(() => toLook(w.avatar, w.path === 'employee' ? 'employee' : 'owner'), [w.avatar, w.path])
   return (
-    <svg width={size} height={size} viewBox="-16 -58 32 32" className="shrink-0 rounded-full bg-gradient-to-b from-[#BDE8FF] to-[#8FD0F5]">
-      <CharacterArt look={{ ...w.avatar, role: w.path === 'employee' ? 'employee' : 'owner' }} walking={false} flip={false} />
+    <svg width={size} height={size} viewBox="-19 -60 38 37" className="shrink-0 rounded-full bg-gradient-to-b from-[#BDE8FF] to-[#8FD0F5]">
+      <CharacterArt look={look} part="head" yaw={14} />
     </svg>
   )
 }
 
-export function HUD({ onMenu, onGo, onClaimStory, onZoom, onRecenter }: { onMenu: (m: 'bag' | 'quest' | 'rank' | 'settings') => void; onGo: () => void; onClaimStory: () => void; onZoom: (d: number) => void; onRecenter: () => void }) {
+export function HUD({ onMenu, onGo, onClaimStory, onZoom, onRecenter }: { onMenu: (m: 'bag' | 'quest' | 'rank' | 'settings' | 'character') => void; onGo: () => void; onClaimStory: () => void; onZoom: (d: number) => void; onRecenter: () => void }) {
   const w = useWorld()
   const g = useGame()
   const [now, setNow] = useState(Date.now())
@@ -51,7 +53,11 @@ export function HUD({ onMenu, onGo, onClaimStory, onZoom, onRecenter }: { onMenu
   return (
     <>
       {/* 왼쪽 위: 내 정보 */}
-      <div className="pointer-events-auto absolute left-2 top-2 z-30 flex items-center gap-2 rounded-2xl border-2 border-[#1B1D45]/70 bg-white/92 py-1.5 pl-1.5 pr-3 shadow-lg backdrop-blur">
+      <button
+        onClick={() => onMenu('character')}
+        aria-label="내 캐릭터"
+        className="pointer-events-auto absolute left-2 top-2 z-30 flex items-center gap-2 rounded-2xl border-2 border-[#1B1D45]/70 bg-white/92 py-1.5 pl-1.5 pr-3 text-left shadow-lg backdrop-blur transition active:scale-[0.98]"
+      >
         <div className="relative">
           <Avatar />
           <span className="absolute -bottom-1 -left-1 rounded-full border-2 border-white bg-ink px-1.5 text-[0.625rem] font-black text-white">Lv.{lv.level}</span>
@@ -76,7 +82,7 @@ export function HUD({ onMenu, onGo, onClaimStory, onZoom, onRecenter }: { onMenu
           </div>
           {en.nextIn > 0 && <p className="text-[0.5rem] font-bold text-mute">+1 체력 {mmss(en.nextIn)}</p>}
         </div>
-      </div>
+      </button>
 
       {/* 가운데 위: 날짜·날씨 */}
       <div className="pointer-events-none absolute left-1/2 top-2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-2xl border-2 border-[#1B1D45]/70 bg-gradient-to-b from-[#FFF8E1] to-[#FCEBC2] px-3 py-1.5 shadow-lg">

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { toLook } from '../avatar'
+import { Turntable } from './CharacterPanel'
 import { RotateCcw } from 'lucide-react'
 import type { Personality } from '@/game/types'
 import { useGame } from '@/game/store'
@@ -9,7 +11,6 @@ import { todayKey } from '@/lib/date'
 import { useWorld, levelOf } from '../store'
 import { CROPS, itemInfo } from '../items'
 import { RIVAL_PLACEHOLDER } from '../map'
-import { CharacterArt } from '../render/Character'
 import { Bar, Card, Chip, cx, GameButton, Panel, Tabs, toast, won } from '../ui/kit'
 
 /* ───────── 이웃 가게 (경쟁 상대 관찰) ───────── */
@@ -194,58 +195,7 @@ export function BagPanel({ onClose }: { onClose: () => void }) {
 }
 
 /* ───────── 설정 ───────── */
-export const HAIR_COLORS = ['#3B2A20', '#1F1A17', '#7A4B2A', '#C98B4F', '#E8C07A', '#8E6BBF']
-export const OUTFITS = ['#176FF2', '#F25C54', '#2E9C6A', '#F2A93B', '#7B61FF', '#202244', '#E86FA0', '#3FB8A6']
-export const SKINS = ['#FFE3CC', '#FFD9B8', '#F2C29B', '#D9A27A', '#B57A55']
-
-export function AvatarEditor({ look, onChange }: { look: { hair: number; hairColor: string; outfit: string; skin: string }; onChange: (l: Partial<{ hair: number; hairColor: string; outfit: string; skin: string }>) => void }) {
-  const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div>
-      <p className="mb-1 text-[0.6875rem] font-black text-sub">{label}</p>
-      <div className="flex flex-wrap gap-1.5">{children}</div>
-    </div>
-  )
-  const Swatch = ({ c, on, set }: { c: string; on: boolean; set: () => void }) => (
-    <button aria-label={c} onClick={set} className={cx('size-8 rounded-full border-2 border-white shadow', on && 'ring-[3px] ring-primary')} style={{ background: c }} />
-  )
-  return (
-    <div className="space-y-2">
-      <Row label="머리 모양">
-        {['짧은 머리', '단발', '묶은 머리', '모자'].map((n, i) => (
-          <button key={n} onClick={() => onChange({ hair: i })} className={cx('h-8 rounded-xl px-2.5 text-[0.75rem] font-black', look.hair === i ? 'bg-ink text-white' : 'bg-black/5')}>
-            {n}
-          </button>
-        ))}
-      </Row>
-      <Row label="머리 색">
-        {HAIR_COLORS.map((c) => (
-          <Swatch key={c} c={c} on={look.hairColor === c} set={() => onChange({ hairColor: c })} />
-        ))}
-      </Row>
-      <Row label="옷 색">
-        {OUTFITS.map((c) => (
-          <Swatch key={c} c={c} on={look.outfit === c} set={() => onChange({ outfit: c })} />
-        ))}
-      </Row>
-      <Row label="피부 톤">
-        {SKINS.map((c) => (
-          <Swatch key={c} c={c} on={look.skin === c} set={() => onChange({ skin: c })} />
-        ))}
-      </Row>
-    </div>
-  )
-}
-
-export function CharacterPreview({ look, role, size = 150 }: { look: { hair: number; hairColor: string; outfit: string; skin: string }; role?: 'owner' | 'employee'; size?: number }) {
-  return (
-    <svg width={size} height={size * 1.15} viewBox="-30 -66 60 69" className="rounded-3xl bg-gradient-to-b from-[#CFEFFF] to-[#9ED8F5]">
-      <ellipse cx={0} cy={1} rx={22} ry={6} fill="#7CC36A" />
-      <CharacterArt look={{ ...look, role }} walking={false} flip={false} scale={1.05} />
-    </svg>
-  )
-}
-
-export function SettingsPanel({ onClose }: { onClose: () => void }) {
+export function SettingsPanel({ onClose, onCharacter }: { onClose: () => void; onCharacter: () => void }) {
   const w = useWorld()
   const g = useGame()
   const app = useApp()
@@ -253,9 +203,12 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [confirm, setConfirm] = useState(false)
   return (
     <Panel title="설정" icon="⚙️" color="#4B4F7A" wide onClose={onClose}>
-      <div className="grid gap-3 md:grid-cols-[auto_1fr_1fr]">
+      <div className="grid gap-3 md:grid-cols-[auto_1fr]">
         <div className="flex flex-col items-center gap-2">
-          <CharacterPreview look={w.avatar} role={w.path === 'employee' ? 'employee' : 'owner'} size={130} />
+          <Turntable look={toLook(w.avatar, w.path === 'employee' ? 'employee' : 'owner')} size={130} controls={false} />
+          <GameButton size="sm" tone="violet" onClick={onCharacter}>
+            🎨 캐릭터 꾸미기 · 시트
+          </GameButton>
           <div className="flex gap-1">
             <input value={name} onChange={(e) => setName(e.target.value)} maxLength={8} className="h-9 w-28 rounded-xl border-2 border-black/10 bg-white px-2 text-[0.875rem] font-black outline-none focus:border-primary" />
             <GameButton size="sm" disabled={!name.trim() || name === w.name} onClick={() => (w.setAvatar({}, name.trim()), toast('이름을 바꿨어요'))}>
@@ -263,8 +216,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             </GameButton>
           </div>
         </div>
-        <AvatarEditor look={w.avatar} onChange={(l) => w.setAvatar(l)} />
-        <div className="space-y-2">
+        <div className="grid content-start gap-2 sm:grid-cols-2">
           <Card>
             <p className="text-[0.8125rem] font-black">🔊 듣기 모드 속도</p>
             <div className="mt-1.5 flex gap-1">

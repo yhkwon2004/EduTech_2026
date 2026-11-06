@@ -6,7 +6,10 @@ import { useScreen } from '../screen'
 import { GroundLayer } from './Ground'
 import { AcademyArt, BoardArt, CompanyArt, MarketArt, RivalArt, ShopArt, SupportArt, WorkshopArt } from './Buildings'
 import { Crop, Deco, LockedPlot, PlotHit } from './Props'
-import { CharacterNode, type Look } from './Character'
+import { CharacterNode, type Act, type Expr, type Look } from './Character'
+import { VILLAGERS, toLook } from '../avatar'
+import { useEmote, ACT_MS } from '../emote'
+import { energyNow } from '../store'
 import { WorldDefs } from './Defs'
 import { hash, rng } from '@/lib/rng'
 import { todayKey } from '@/lib/date'
@@ -23,10 +26,50 @@ interface Walker {
   x: number
   y: number
   path: { x: number; y: number }[]
-  flip: boolean
-  /** 화면 위쪽(멀어지는 쪽)으로 걸으면 뒷모습 */
-  back: boolean
   walking: boolean
+  /** 바라보는 각도(도): 0 = 정면, +90 = 화면 오른쪽, 180 = 뒷모습 */
+  yaw: number
+  target: number
+  act: Act | null
+  actUntil: number
+  expr: Expr | null
+  bubble: string | null
+  bubbleUntil: number
+  nextIdle: number
+  idleSince: number
+  pauseUntil: number
+}
+
+interface CharView {
+  x: number
+  y: number
+  walking: boolean
+  yaw: number
+  act: Act | null
+  expr: Expr | null
+  bubble: string | null
+  hidden: boolean
+}
+
+const normDeg = (d: number) => {
+  let v = ((((d + 180) % 360) + 360) % 360) - 180
+  if (v === -180) v = 180
+  return v
+}
+const quantYaw = (d: number) => normDeg(Math.round(normDeg(d) / 22.5) * 22.5)
+const sameView = (a: CharView | undefined, b: CharView) =>
+  !!a && a.x === b.x && a.y === b.y && a.walking === b.walking && a.yaw === b.yaw && a.act === b.act && a.expr === b.expr && a.bubble === b.bubble && a.hidden === b.hidden
+
+function newWalker(x: number, y: number, yaw = 20): Walker {
+  return { x, y, path: [], walking: false, yaw, target: yaw, act: null, actUntil: 0, expr: null, bubble: null, bubbleUntil: 0, nextIdle: performance.now() + 4000 + Math.random() * 4000, idleSince: performance.now(), pauseUntil: 0 }
+}
+function viewOf(w: Walker, hidden = false): CharView {
+  return { x: Math.round(w.x), y: Math.round(w.y), walking: w.walking, yaw: quantYaw(w.yaw), act: w.act, expr: w.expr, bubble: w.bubble, hidden }
+}
+function startAct(w: Walker, act: Act, t: number, expr: Expr | null = null) {
+  w.act = act
+  w.actUntil = t + ACT_MS[act]
+  w.expr = expr
 }
 
 const SPEED = 3.6 // 타일/초
@@ -68,54 +111,82 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     return () => clearInterval(t)
   }, [])
 
-  const look: Look = { ...world.avatar, role: world.path === 'employee' ? 'employee' : 'owner' }
+  const role = world.path === 'employee' ? 'employee' : 'owner'
+  const look: Look = useMemo(() => toLook(world.avatar, role), [world.avatar, role])
   const level = levelOf(world.exp).level
   const hour = new Date(now).getHours()
   const night = hour >= 19 || hour < 6
 
   // ── 이동 상태 (ref로 관리)
-  const player = useRef<Walker>({ x: world.pos.x, y: world.pos.y, path: [], flip: false, back: false, walking: false })
+  const player = useRef<Walker>(newWalker(world.pos.x, world.pos.y))
   const pending = useRef<HitId | null>(null)
-  const [pTile, setPTile] = useState({ x: world.pos.x, y: world.pos.y, walking: false, flip: false, back: false })
-  const pTileRef = useRef(pTile)
+  const [pView, setPView] = useState<CharView>(() => viewOf(player.current))
+  const pViewRef = useRef(pView)
   const onArriveRef = useRef(onArrive)
   onArriveRef.current = onArrive
   const playerEl = useRef<SVGGElement>(null)
   const camEl = useRef<SVGGElement>(null)
   const cam = useRef({ x: footOf(world.pos).x, y: footOf(world.pos).y - 40, zoom: 1, follow: true })
   const [zoomLevel, setZoomLevel] = useState(1)
+  const pushPlayer = useCallback(() => {
+    const v = viewOf(player.current)
+    if (!sameView(pViewRef.current, v)) {
+      pViewRef.current = v
+      setPView(v)
+    }
+  }, [])
 
-  // ── 손님 NPC
-  const npcs = useRef<(Walker & { look: Look; hidden: number; goal: { x: number; y: number }; rush?: boolean })[]>([])
+  // ── 마을 사람들 (NPC)
+  type Npc = Walker & { hidden: number; goal: { x: number; y: number }; rush?: boolean; greetAt: number; vi: number }
+  const npcs = useRef<Npc[]>([])
   const npcEls = useRef<(SVGGElement | null)[]>([])
-  const [npcTiles, setNpcTiles] = useState<{ x: number; y: number; walking: boolean; flip: boolean; back: boolean; hidden: boolean }[]>([])
-  const npcTilesRef = useRef(npcTiles)
+  const [npcViews, setNpcViews] = useState<CharView[]>([])
+  const npcViewsRef = useRef(npcViews)
   const doors = useMemo(() => [...RIVAL_LOTS.map((r) => r.door), BUILDING_MAP.shop.door, BUILDING_MAP.market.door, BUILDING_MAP.academy.door], [])
   useEffect(() => {
     const r = rng(hash('npcs'))
-    const outfits = ['#F28AC0', '#3BAA5C', '#F2A93B', '#8B6CF6', '#3E8EDE', '#E07A3F', '#2E9C9C']
-    const hairs = ['#3B2A20', '#1E1E1E', '#7A4E35', '#C8955A', '#2B2B40']
     npcs.current = Array.from({ length: NPC_COUNT }, (_, i) => {
       const start = doors[Math.floor(r() * doors.length)]
       const goal = doors[Math.floor(r() * doors.length)]
-      return {
-        x: start.x,
-        y: start.y,
-        path: findPath(start, goal),
-        flip: false,
-        back: false,
-        walking: true,
-        hidden: 0,
-        goal,
-        look: { hair: i % 4, hairColor: hairs[i % hairs.length], outfit: outfits[i % outfits.length], skin: i % 3 ? '#FFD9B8' : '#F1C9A5', role: 'npc', pants: i % 2 ? '#34385A' : '#5B6B8C' },
-      }
+      const w = newWalker(start.x, start.y)
+      return { ...w, path: findPath(start, goal), walking: true, hidden: 0, goal, greetAt: 0, vi: i % VILLAGERS.length, nextIdle: performance.now() + 3000 + r() * 9000 }
     })
-    npcTilesRef.current = npcs.current.map((n) => ({ x: n.x, y: n.y, walking: true, flip: false, back: false, hidden: false }))
-    setNpcTiles(npcTilesRef.current)
+    npcViewsRef.current = npcs.current.map((n) => viewOf(n))
+    setNpcViews(npcViewsRef.current)
   }, [doors])
 
+  // 패널에서 보낸 동작 (수확 → 환호 등)
+  useEffect(
+    () =>
+      useEmote.subscribe((st, prev) => {
+        if (st.seq === prev.seq || !st.act) return
+        const p = player.current
+        const t = performance.now()
+        startAct(p, st.act, t, st.act === 'cheer' || st.act === 'wave' ? 'happy' : st.act === 'work' ? null : null)
+        if (!p.walking) p.target = p.yaw >= 0 ? 18 : -18
+        if (st.bubble) {
+          p.bubble = st.bubble
+          p.bubbleUntil = t + 2200
+        }
+        p.nextIdle = t + 7000
+        pushPlayer()
+        // 패널이 열려 있어 루프가 멈춰 있어도 끝나면 풀리게
+        window.setTimeout(() => {
+          const q = player.current
+          const t2 = performance.now()
+          if (q.act && t2 >= q.actUntil) {
+            q.act = null
+            q.expr = null
+          }
+          if (q.bubble && t2 >= q.bubbleUntil) q.bubble = null
+          pushPlayer()
+        }, Math.max(ACT_MS[st.act], 2300) + 50)
+      }),
+    [pushPlayer],
+  )
+
   // ── 화면 크기에 맞춘 기본 확대
-  const baseZoom = Math.max(0.62, Math.min(1.35, screen.height / 430))
+  const baseZoom = Math.max(0.62, Math.min(1.35, screen.height / 400))
 
   const applyCamera = useCallback(() => {
     const c = cam.current
@@ -128,10 +199,12 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     camEl.current?.setAttribute('transform', `translate(${screen.width / 2 - c.x * z},${screen.height / 2 - c.y * z}) scale(${z})`)
   }, [screen.width, screen.height, baseZoom])
 
-  // ── 매 프레임: 이동 + 카메라
+  // ── 매 프레임: 이동 + 몸 돌리기 + 동작 + 카메라
   useEffect(() => {
     let raf = 0
     let last = performance.now()
+    let energyCheck = 0
+    let tired = false
     const step = (w: Walker, dt: number) => {
       if (!w.path.length) {
         w.walking = false
@@ -142,11 +215,8 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
       const dy = next.y - w.y
       const dist = Math.hypot(dx, dy)
       const mv = SPEED * dt
-      // 화면에서 오른쪽으로 가면 오른쪽을 봄
-      const sdx = dx - dy
-      const sdy = dx + dy
-      if (Math.abs(sdx) > 0.01) w.flip = sdx < 0
-      if (Math.abs(sdy) > 0.01) w.back = sdy < 0
+      // 땅 위 방향 → 카메라 기준 각도 (화면 오른쪽 = x−y, 카메라 쪽 = x+y)
+      if (dist > 0.001) w.target = (Math.atan2(dx - dy, dx + dy) * 180) / Math.PI
       if (dist <= mv) {
         w.x = next.x
         w.y = next.y
@@ -158,21 +228,57 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
       w.walking = true
       return true
     }
+    const turn = (w: Walker, dt: number, rate = 760) => {
+      const diff = normDeg(w.target - w.yaw)
+      const st = rate * dt
+      w.yaw = Math.abs(diff) <= st ? w.target : normDeg(w.yaw + Math.sign(diff) * st)
+    }
+    const expire = (w: Walker, t: number) => {
+      if (w.act && t >= w.actUntil) {
+        if (w.act === 'look') w.target = w.yaw >= 0 ? 20 : -20
+        w.act = null
+        w.expr = null
+      }
+      if (w.bubble && t >= w.bubbleUntil) w.bubble = null
+    }
     const loop = (t: number) => {
       const dt = Math.min(0.05, (t - last) / 1000)
       last = t
+      const p = player.current
+      if (t > energyCheck) {
+        energyCheck = t + 1000
+        const ws = useWorld.getState()
+        tired = energyNow(ws).energy <= 3
+      }
       if (!paused) {
-        const p = player.current
         const wasWalking = p.walking
-        step(p, dt)
+        const moving = step(p, dt)
+        if (moving) {
+          p.idleSince = t
+          if (p.act && p.act !== 'cheer') p.act = null
+        }
+        turn(p, dt)
         const f = footOf(p)
         playerEl.current?.setAttribute('transform', `translate(${f.x},${f.y})`)
-        const tile = { x: Math.round(p.x), y: Math.round(p.y) }
-        const pt = pTileRef.current
-        if (tile.x !== pt.x || tile.y !== pt.y || p.walking !== pt.walking || p.flip !== pt.flip || p.back !== pt.back) {
-          pTileRef.current = { x: tile.x, y: tile.y, walking: p.walking, flip: p.flip, back: p.back }
-          setPTile(pTileRef.current)
+        expire(p, t)
+        // 가만히 있으면: 카메라 쪽으로 몸을 돌리고, 가끔 두리번·기지개·하품
+        if (!p.walking) {
+          if (t - p.idleSince > 1300 && !p.act && Math.abs(p.target) > 60) p.target = p.target >= 0 ? 22 : -22
+          if (!p.act && t > p.nextIdle) {
+            const roll = Math.random()
+            if (tired) startAct(p, 'yawn', t, 'yawn')
+            else if (roll < 0.4) {
+              startAct(p, 'look', t)
+              p.target = (p.yaw >= 0 ? 1 : -1) * (roll < 0.2 ? 75 : -35)
+            } else if (roll < 0.62) startAct(p, 'stretch', t, roll < 0.5 ? 'yawn' : null)
+            else if (roll < 0.8) startAct(p, 'nod', t, 'happy')
+            else startAct(p, 'hop', t, 'happy')
+            p.nextIdle = t + 6000 + Math.random() * 7000
+          }
         }
+        if (!p.act && tired && !p.walking) p.expr = 'tired'
+        else if (!p.act && p.expr === 'tired') p.expr = null
+        pushPlayer()
         if (wasWalking && !p.walking) {
           useWorld.getState().setPos({ x: Math.round(p.x), y: Math.round(p.y) })
           if (pending.current) {
@@ -181,37 +287,67 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
             onArriveRef.current(hit)
           }
         }
-        // 손님들
+        // 마을 사람들
         let changed = false
-        const tiles = npcTilesRef.current.length === npcs.current.length ? [...npcTilesRef.current] : npcs.current.map((n) => ({ x: n.x, y: n.y, walking: true, flip: false, back: false, hidden: false }))
+        const views = npcViewsRef.current.length === npcs.current.length ? [...npcViewsRef.current] : npcs.current.map((n) => viewOf(n))
         npcs.current.forEach((n, i) => {
+          const vill = VILLAGERS[n.vi]
           if (n.hidden > 0) {
             n.hidden -= dt
             if (n.hidden <= 0) {
               const goal = n.rush ? BUILDING_MAP.shop.door : doors[Math.floor(Math.random() * doors.length)]
-              n.rush = false
               n.goal = goal
               n.path = findPath({ x: Math.round(n.x), y: Math.round(n.y) }, goal)
+              if (n.rush) {
+                n.bubble = Math.random() < 0.5 ? '🛒' : '😋'
+                n.bubbleUntil = t + 2600
+              }
+              n.rush = false
             }
+          } else if (t < n.pauseUntil) {
+            n.walking = false
           } else if (!step(n, dt * 0.55)) {
             n.hidden = 1.5 + Math.random() * 4
           }
+          turn(n, dt, 600)
+          expire(n, t)
+          // 내 캐릭터 가까이 오면 인사
+          const near = Math.hypot(n.x - p.x, n.y - p.y) < 2.3
+          if (n.hidden <= 0 && near && t > n.greetAt) {
+            n.greetAt = t + 30000
+            n.pauseUntil = t + 1800
+            n.target = (Math.atan2(p.x - n.x - (p.y - n.y), p.x - n.x + (p.y - n.y)) * 180) / Math.PI
+            startAct(n, 'wave', t, 'happy')
+            n.bubble = '👋'
+            n.bubbleUntil = t + 1800
+          } else if (n.hidden <= 0 && n.walking && t > n.nextIdle) {
+            // 가다가 멈춰서 혼잣말·두리번
+            n.nextIdle = t + 9000 + Math.random() * 12000
+            n.pauseUntil = t + 2200
+            const line = vill.lines[Math.floor(Math.random() * vill.lines.length)]
+            n.bubble = line
+            n.bubbleUntil = t + 2200
+            n.expr = 'talk'
+            n.act = null
+            n.actUntil = t + 2200
+            n.target = n.yaw >= 0 ? 25 : -25
+          }
+          if (n.expr === 'talk' && t >= n.actUntil) n.expr = null
           const el = npcEls.current[i]
           if (el) {
             const nf = footOf(n)
             el.setAttribute('transform', `translate(${nf.x},${nf.y})`)
             el.style.opacity = n.hidden > 0 ? '0' : '1'
           }
-          const tt = { x: Math.round(n.x), y: Math.round(n.y), walking: n.walking, flip: n.flip, back: n.back, hidden: n.hidden > 0 }
-          const prev = tiles[i]
-          if (!prev || prev.x !== tt.x || prev.y !== tt.y || prev.flip !== tt.flip || prev.back !== tt.back || prev.hidden !== tt.hidden || prev.walking !== tt.walking) {
-            tiles[i] = tt
+          const v = viewOf(n, n.hidden > 0)
+          if (!sameView(views[i], v)) {
+            views[i] = v
             changed = true
           }
         })
         if (changed) {
-          npcTilesRef.current = tiles
-          setNpcTiles(tiles)
+          npcViewsRef.current = views
+          setNpcViews(views)
         }
         // 카메라 따라가기
         const c = cam.current
@@ -219,13 +355,16 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
           c.x += (f.x - c.x) * 0.1
           c.y += (f.y - 30 - c.y) * 0.1
         }
+      } else {
+        expire(p, t)
+        pushPlayer()
       }
       applyCamera()
       raf = requestAnimationFrame(loop)
     }
     raf = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(raf)
-  }, [applyCamera, doors, paused])
+  }, [applyCamera, doors, paused, pushPlayer])
 
   const walkToTile = useCallback((tile: { x: number; y: number }, hit: HitId | null) => {
     const p = player.current
@@ -262,7 +401,10 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
         npcs.current.slice(0, n).forEach((npc) => {
           npc.rush = true
           npc.hidden = 0
+          npc.pauseUntil = 0
           npc.path = findPath({ x: Math.round(npc.x), y: Math.round(npc.y) }, BUILDING_MAP.shop.door)
+          npc.bubble = Math.random() < 0.5 ? '🛒' : '😋'
+          npc.bubbleUntil = performance.now() + 2600
         })
       },
     }),
@@ -389,15 +531,30 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     })
   }
   items.push({
-    depth: pTile.x + pTile.y + 0.5,
-    el: <CharacterNode key="player" ref={playerEl} look={look} walking={pTile.walking} flip={pTile.flip} back={pTile.back} name={world.name || '나'} me />,
+    depth: pView.x + pView.y + 0.5,
+    el: <CharacterNode key="player" ref={playerEl} look={look} walking={pView.walking} yaw={pView.yaw} act={pView.act} expr={pView.expr} bubble={pView.bubble} name={world.name || '나'} me speed={0.42} />,
   })
   npcs.current.forEach((n, i) => {
-    const t = npcTiles[i]
+    const t = npcViews[i]
     if (!t) return
+    const vill = VILLAGERS[n.vi]
     items.push({
       depth: t.x + t.y + 0.45,
-      el: <CharacterNode key={`npc${i}`} ref={(el) => void (npcEls.current[i] = el)} look={n.look} walking={t.walking} flip={t.flip} back={t.back} scale={0.86} seed={i + 1} />,
+      el: (
+        <CharacterNode
+          key={`npc${i}`}
+          ref={(el) => void (npcEls.current[i] = el)}
+          look={vill.look}
+          walking={t.walking}
+          yaw={t.yaw}
+          act={t.act}
+          expr={t.expr}
+          bubble={t.hidden ? null : t.bubble}
+          scale={vill.scale}
+          seed={i + 3}
+          speed={0.72}
+        />
+      ),
     })
   })
   items.sort((a, b) => a.depth - b.depth)

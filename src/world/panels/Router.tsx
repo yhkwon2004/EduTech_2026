@@ -12,8 +12,9 @@ import { ResultPanel } from './ResultPanel'
 import { ShopPanel } from './ShopPanel'
 import { SupportPanel } from './SupportPanel'
 import { WorkshopPanel } from './WorkshopPanel'
+import { CharacterPanel } from './CharacterPanel'
 
-export type MenuId = 'bag' | 'quest' | 'rank' | 'settings'
+export type MenuId = 'bag' | 'quest' | 'rank' | 'settings' | 'character'
 export interface PanelState {
   hit: HitId | MenuId | 'result'
   /** 패널 안에서 바로 열 화면 (예: 레슨 id, 게시판 탭) */
@@ -75,7 +76,9 @@ export function PanelRouter({
     case 'bag':
       return <BagPanel onClose={onClose} />
     case 'settings':
-      return <SettingsPanel onClose={onClose} />
+      return <SettingsPanel onClose={onClose} onCharacter={() => open({ hit: 'character' })} />
+    case 'character':
+      return <CharacterPanel onClose={onClose} />
     case 'result':
       return panel.result ? <ResultPanel result={panel.result} onClose={onClose} openLesson={openLesson} /> : null
     default:

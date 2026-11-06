@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { BOTTOMS, DEFAULT_AVATAR, EYES, GLASSES, HAIR_STYLES, HATS, TOPS, VILLAGERS, randomAvatar, toLook } from '@/world/avatar'
 import { BUILDINGS, findPath, PLOTS, RIVAL_LOTS, screenToTile, iso, walkable, GROUND } from '@/world/map'
 import { CROPS, PRESET_RECIPES, buyPrice, recipeUnitCost, sellPrice, priceFactor } from '@/world/items'
 import { JOBS, TASKS, canPromote, tasksFor, workResult, RANKS } from '@/world/jobs'
@@ -177,5 +178,32 @@ describe('world store', () => {
     useWorld.getState().claimDaily('d-plant', { cash: 1000, exp: 10 })
     useWorld.getState().claimDaily('d-plant', { cash: 1000, exp: 10 })
     expect(useWorld.getState().cash).toBe(601000)
+  })
+})
+
+describe('avatar', () => {
+  it('fills defaults for old saves and keeps chosen values', () => {
+    const l = toLook({ hair: 2, hairColor: '#111111', outfit: '#222222', skin: '#333333' }, 'owner')
+    expect(l.hair).toBe(2)
+    expect(l.role).toBe('owner')
+    expect(l.eyes).toBe(DEFAULT_AVATAR.eyes)
+    expect(l.hat).toBe(0)
+    expect(l.bottomColor).toBe(DEFAULT_AVATAR.bottomColor)
+  })
+  it('random avatars stay inside the option lists', () => {
+    for (let i = 0; i < 40; i++) {
+      const a = randomAvatar(i)
+      expect(a.hair).toBeLessThan(HAIR_STYLES.length)
+      expect(a.eyes).toBeLessThan(EYES.length)
+      expect(a.hat).toBeLessThan(HATS.length)
+      expect(a.glasses).toBeLessThan(GLASSES.length)
+      expect(a.top).toBeLessThan(TOPS.length)
+      expect(a.bottom).toBeLessThan(BOTTOMS.length)
+    }
+  })
+  it('has a distinct villager cast with lines', () => {
+    expect(VILLAGERS.length).toBeGreaterThanOrEqual(7)
+    expect(new Set(VILLAGERS.map((v) => v.name)).size).toBe(VILLAGERS.length)
+    for (const v of VILLAGERS) expect(v.lines.length).toBeGreaterThan(0)
   })
 })

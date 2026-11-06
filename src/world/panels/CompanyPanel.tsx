@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { emote } from '../emote'
 import { Briefcase, Check, ChevronRight, LogOut, Repeat, TrendingUp } from 'lucide-react'
 import { CATEGORY_MAP } from '@/data/categories'
 import { LESSON_MAP } from '@/data/courses'
@@ -143,6 +144,7 @@ function WorkTab({ openLesson }: { openLesson: (id: string) => void }) {
           setResult(r)
           setWorking(false)
           toast(`퇴근! 일급 +${won(r.pay)}원 · 실적 +${r.perf} · +15 EXP`)
+          emote(r.perf >= 70 ? 'cheer' : 'nod', '💼')
         }}
       />
     )
@@ -301,7 +303,10 @@ function CareerTab({ onStartup, openLesson }: { onStartup: () => void; openLesso
                 tone="sun"
                 disabled={!ready}
                 onClick={() => {
-                  if (w.promote(rl)) toast(`🎉 ${next.name}으로 승진했어요! 일급 ${won(next.pay)}원 · +40 EXP`, 'level')
+                  if (w.promote(rl)) {
+                    toast(`🎉 ${next.name}으로 승진했어요! 일급 ${won(next.pay)}원 · +40 EXP`, 'level')
+                    emote('cheer', '🎉')
+                  }
                 }}
               >
                 승진 심사 받기
@@ -445,6 +450,7 @@ export function CompanyPanel({ onClose, openLesson, onStartup }: { onClose: () =
           onPick={(id) => {
             w.joinJob(id)
             toast(`${JOB_MAP[id].name} 인턴으로 입사했어요! 🎉`, 'level')
+            emote('wave', '🙇')
           }}
         />
       </Panel>

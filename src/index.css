@@ -248,65 +248,17 @@
       opacity: 0;
     }
   }
-  .char-bob {
-    animation: char-bob 0.2s ease-in-out infinite alternate;
+  /* ── 도트 캐릭터: 프레임 스트립을 steps()로 넘겨요 ── */
+  .px-img {
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
   }
-  @keyframes char-bob {
+  @keyframes px-strip {
     from {
-      transform: translateY(0) scaleY(1);
+      transform: translateX(0);
     }
     to {
-      transform: translateY(-2.4px) scaleY(1.01);
-    }
-  }
-  .shadow-walk {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: shadow-walk 0.2s ease-in-out infinite alternate;
-  }
-  @keyframes shadow-walk {
-    to {
-      transform: scale(0.86);
-      opacity: 0.22;
-    }
-  }
-  .char-breathe {
-    animation: breathe 3.2s ease-in-out infinite;
-  }
-  @keyframes breathe {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-0.7px);
-    }
-  }
-  .head-walk {
-    animation: head-walk 0.4s ease-in-out infinite;
-  }
-  @keyframes head-walk {
-    0%,
-    100% {
-      transform: rotate(-2.5deg);
-    }
-    50% {
-      transform: rotate(2.5deg);
-    }
-  }
-  .eye-blink {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: eye-blink 4.6s infinite;
-  }
-  @keyframes eye-blink {
-    0%,
-    93%,
-    100% {
-      transform: scaleY(1);
-    }
-    95% {
-      transform: scaleY(0.12);
+      transform: translateX(var(--px-end));
     }
   }
   .me-ring {
@@ -414,59 +366,6 @@
     background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: -0.02em;
-  }
-  .char-idle {
-    animation: char-idle 2.6s ease-in-out infinite;
-  }
-  @keyframes char-idle {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-0.8px);
-    }
-  }
-  .leg-a {
-    animation: leg 0.4s ease-in-out infinite;
-  }
-  /* 반 박자 늦게 → 두 다리가 번갈아 */
-  .leg-b {
-    animation: leg 0.4s ease-in-out infinite;
-    animation-delay: -0.2s;
-  }
-  @keyframes leg {
-    0%,
-    100% {
-      transform: rotate(18deg);
-    }
-    50% {
-      transform: rotate(-18deg);
-    }
-  }
-  .arm-swing {
-    animation: arm 0.4s ease-in-out infinite;
-  }
-  .arm-idle {
-    animation: arm-idle 3.2s ease-in-out infinite;
-  }
-  @keyframes arm-idle {
-    0%,
-    100% {
-      transform: rotate(2deg);
-    }
-    50% {
-      transform: rotate(-3deg);
-    }
-  }
-  @keyframes arm {
-    0%,
-    100% {
-      transform: rotate(20deg);
-    }
-    50% {
-      transform: rotate(-20deg);
-    }
   }
   .bubble-pop {
     animation: pop 0.3s ease-out;

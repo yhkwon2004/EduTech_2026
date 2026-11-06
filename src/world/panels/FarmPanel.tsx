@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { emote } from '../emote'
 import { Droplets, ShoppingBasket, Sprout } from 'lucide-react'
 import { useWorld, levelOf } from '../store'
 import { CROPS, CROP_MAP } from '../items'
@@ -62,6 +63,7 @@ export function FarmPanel({ plotId, onClose, goMarket }: { plotId: string; onClo
                     const r = w.plant(plotId, c.id)
                     if (r === 'ok') {
                       toast(`${c.emoji} ${c.name}을(를) 심었어요 · 체력 -1`)
+                      emote('work', '🌱')
                       onClose()
                     } else if (r === 'energy') toast('체력이 부족해요. 잠시 쉬거나 레슨을 들어 보세요', 'bad')
                   }}
@@ -104,6 +106,7 @@ export function FarmPanel({ plotId, onClose, goMarket }: { plotId: string; onClo
                 const n = w.harvest(plotId)
                 if (n > 0) {
                   toast(`${crop.emoji} ${crop.name} ${n}개 수확! · +4 EXP`)
+                  emote('cheer', crop.emoji)
                   onClose()
                 } else if (n < 0) toast('체력이 부족해요', 'bad')
               }}
@@ -121,7 +124,10 @@ export function FarmPanel({ plotId, onClose, goMarket }: { plotId: string; onClo
               <GameButton
                 tone="primary"
                 onClick={() => {
-                  if (w.water(plotId)) toast('💧 물을 줬어요 · 남은 시간 40% 단축 + 수확 +1')
+                  if (w.water(plotId)) {
+                    toast('💧 물을 줬어요 · 남은 시간 40% 단축 + 수확 +1')
+                    emote('work', '💧')
+                  }
                   else toast('체력이 부족해요', 'bad')
                 }}
               >

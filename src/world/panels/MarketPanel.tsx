@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { emote } from '../emote'
 import { useWorld, levelOf } from '../store'
 import { CROPS, INGREDIENTS, buyPrice, itemInfo, priceFactor, seedPrice, sellPrice } from '../items'
 import { useGame } from '@/game/store'
@@ -47,7 +48,10 @@ export function MarketPanel({ onClose }: { onClose: () => void }) {
   const level = levelOf(w.exp).level
   const buyGoods = g.started ? g.products.filter((p) => w.recipes[p.id]?.type === 'buy') : []
 
-  const pay = (ok: boolean, msg: string) => toast(ok ? msg : '돈이 부족해요', ok ? 'good' : 'bad')
+  const pay = (ok: boolean, msg: string) => {
+    toast(ok ? msg : '돈이 부족해요', ok ? 'good' : 'bad')
+    if (ok) emote('nod', '🛍️')
+  }
 
   return (
     <Panel
@@ -145,7 +149,10 @@ export function MarketPanel({ onClose }: { onClose: () => void }) {
                   label="팔기"
                   tone="sun"
                   onBuy={(q) => {
-                    if (w.sell(id, q, price)) toast(`${info.emoji} ${info.name} ${q}개를 팔았어요 +${won(q * price)}원`)
+                    if (w.sell(id, q, price)) {
+                      toast(`${info.emoji} ${info.name} ${q}개를 팔았어요 +${won(q * price)}원`)
+                      emote('hop', '💰')
+                    }
                   }}
                 />
               )

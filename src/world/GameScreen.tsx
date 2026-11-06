@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { emote } from './emote'
 import { World, type WorldHandle } from './render/World'
 import { HUD } from './ui/HUD'
 import { Toasts, toast } from './ui/kit'
@@ -105,6 +106,7 @@ export function GameScreen() {
     if (!q || !story.done) return
     useWorld.getState().claimStory(q.id, q.reward)
     toast(`퀘스트 완료! +${q.reward.cash.toLocaleString()}원 · +${q.reward.exp} EXP`)
+    emote('hop', '🎁')
   }
 
   const runDay = useCallback((d: DayDecision) => {
@@ -115,7 +117,10 @@ export function GameScreen() {
   }, [])
   const finishRun = useCallback(() => {
     setRunning((r) => {
-      if (r) setPanel({ hit: 'result', result: r })
+      if (r) {
+        setPanel({ hit: 'result', result: r })
+        emote(r.profit >= 0 ? 'cheer' : 'nod', r.profit >= 0 ? '💰' : '😅')
+      }
       return null
     })
   }, [])
@@ -125,7 +130,10 @@ export function GameScreen() {
   const prevLevel = useRef<number | null>(null)
   useEffect(() => {
     const lv = levelOf(exp).level
-    if (prevLevel.current !== null && lv > prevLevel.current) toast(`🎉 레벨 ${lv} 달성! 체력이 가득 찼어요`, 'level')
+    if (prevLevel.current !== null && lv > prevLevel.current) {
+      toast(`🎉 레벨 ${lv} 달성! 체력이 가득 찼어요`, 'level')
+      emote('cheer', '⭐')
+    }
     prevLevel.current = lv
   }, [exp])
 
