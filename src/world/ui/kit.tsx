@@ -1,6 +1,7 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { create } from 'zustand'
 import { Minus, Plus, X } from 'lucide-react'
+import { sfx } from '../audio'
 
 export function cx(...c: (string | false | null | undefined)[]) {
   return c.filter(Boolean).join(' ')
@@ -71,7 +72,7 @@ export function Stepper({ value, onChange, min = 0, max = 9999, step = 1 }: { va
         inputMode="numeric"
         value={value}
         onChange={(e) => onChange(Math.min(max, Math.max(min, Math.round(Number(e.target.value) || 0))))}
-        className={cx("rounded-lg bg-black/5 py-1 text-center text-[0.875rem] font-extrabold tabular-nums outline-none", value >= 10000 ? "w-[4.5rem]" : "w-14")}
+        className={cx('rounded-lg bg-black/5 py-1 text-center text-[0.875rem] font-extrabold tabular-nums outline-none', value >= 10000 ? 'w-[4.5rem]' : 'w-14')}
       />
       <button aria-label="늘리기" onClick={() => onChange(Math.min(max, value + step))} className="grid size-7 place-items-center rounded-lg bg-black/5 active:scale-90">
         <Plus className="size-3.5" />
@@ -121,22 +122,53 @@ export function Panel({
   wide?: boolean
   footer?: ReactNode
 }) {
+  const [closing, setClosing] = useState(false)
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
+  const close = () => {
+    if (closing) return
+    setClosing(true)
+    sfx('close')
+    window.setTimeout(() => closeRef.current(), 160)
+  }
+  const closeKey = useRef(close)
+  closeKey.current = close
   useEffect(() => {
-    const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const k = (e: KeyboardEvent) => e.key === 'Escape' && closeKey.current()
     window.addEventListener('keydown', k)
     return () => window.removeEventListener('keydown', k)
-  }, [onClose])
+  }, [])
   return (
     <div className="absolute inset-0 z-40 flex items-center justify-center p-2 sm:p-3" role="dialog" aria-modal="true">
-      <button aria-label="닫기" className="absolute inset-0 animate-fade-in bg-[#101233]/45 backdrop-blur-[2px]" onClick={onClose} />
+      <button aria-label="닫기" className={cx('absolute inset-0 bg-[#101233]/45 backdrop-blur-[2px]', closing ? 'fade-out' : 'animate-fade-in')} onClick={close} />
       <div
-        className={cx('relative flex h-full max-h-[33rem] w-full animate-panel flex-col overflow-hidden rounded-[1.5rem] border-[3px] border-[#1B1D45]/80 bg-[#FFFDF7] shadow-2xl', wide ? 'max-w-[60rem]' : 'max-w-[46rem]')}
+        className={cx(
+          'relative flex h-full max-h-[33rem] w-full flex-col overflow-hidden rounded-[1.5rem] border-[3px] border-[#1B1D45]/80 bg-[#FFFDF7] shadow-2xl',
+          closing ? 'panel-out' : 'animate-panel',
+          wide ? 'max-w-[60rem]' : 'max-w-[46rem]',
+        )}
+        style={{
+          boxShadow: '0 0 0 4px rgba(255,255,255,0.35), 0 24px 60px rgba(16,18,51,0.45)',
+        }}
       >
-        <div className="flex shrink-0 items-center gap-2.5 px-3.5 py-2" style={{ background: `linear-gradient(180deg, ${color}, ${color}DD)` }}>
-          {icon && <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/25 text-[1.25rem] ring-2 ring-white/40">{icon}</span>}
-          <h2 className="min-w-0 shrink-0 truncate text-[1.0625rem] font-black text-white drop-shadow">{title}</h2>
-          <div className="no-scrollbar min-w-0 flex-1 overflow-x-auto">{tabs}</div>
-          <button aria-label="닫기" onClick={onClose} className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/25 text-white ring-2 ring-white/40 active:scale-90">
+        <div
+          className="relative flex shrink-0 items-center gap-2.5 px-3.5 py-2"
+          style={{
+            background: `linear-gradient(180deg, ${color}, ${color}DD)`,
+          }}
+        >
+          <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/25 to-transparent" />
+          <span
+            className="pointer-events-none absolute inset-0 opacity-[0.08]"
+            style={{
+              backgroundImage: 'radial-gradient(#fff 1px, transparent 1.2px)',
+              backgroundSize: '10px 10px',
+            }}
+          />
+          {icon && <span className="relative grid size-9 shrink-0 place-items-center rounded-xl bg-white/25 text-[1.25rem] ring-2 ring-white/40">{icon}</span>}
+          <h2 className="relative min-w-0 shrink-0 truncate text-[1.0625rem] font-black text-white drop-shadow">{title}</h2>
+          <div className="no-scrollbar relative min-w-0 flex-1 overflow-x-auto">{tabs}</div>
+          <button aria-label="닫기" onClick={close} className="relative grid size-9 shrink-0 place-items-center rounded-xl bg-white/25 text-white ring-2 ring-white/40 active:scale-90">
             <X className="size-5" strokeWidth={3} />
           </button>
         </div>
@@ -175,7 +207,10 @@ interface Toast {
   text: string
   tone: 'good' | 'bad' | 'level' | 'info'
 }
-export const useToasts = create<{ list: Toast[]; push: (text: string, tone?: Toast['tone']) => void }>((set, get) => ({
+export const useToasts = create<{
+  list: Toast[]
+  push: (text: string, tone?: Toast['tone']) => void
+}>((set, get) => ({
   list: [],
   push: (text, tone = 'good') => {
     const id = Date.now() + Math.random()
@@ -186,26 +221,42 @@ export const useToasts = create<{ list: Toast[]; push: (text: string, tone?: Toa
 
 export function toast(text: string, tone?: Toast['tone']) {
   useToasts.getState().push(text, tone)
+  if (tone === 'bad') sfx('wrong')
+  else if (tone !== 'level') sfx('pop')
+}
+
+/** 글 앞의 이모지를 아이콘으로 */
+function splitIcon(text: string, tone: Toast['tone']) {
+  const m = text.match(/^(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)\s*/u)
+  if (m) return { icon: m[1], body: text.slice(m[0].length) }
+  return {
+    icon: tone === 'bad' ? '⚠️' : tone === 'info' ? '💬' : tone === 'level' ? '🎉' : '✨',
+    body: text,
+  }
 }
 
 export function Toasts() {
   const list = useToasts((s) => s.list)
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-[4.25rem] z-50 flex flex-col-reverse items-center gap-1.5">
-      {list.map((t) => (
-        <div
-          key={t.id}
-          className={cx(
-            'animate-pop rounded-full border-2 px-4 py-1.5 text-[0.875rem] font-black shadow-lg',
-            t.tone === 'good' && 'border-white bg-teal text-white',
-            t.tone === 'bad' && 'border-white bg-coral text-white',
-            t.tone === 'info' && 'border-white bg-ink text-white',
-            t.tone === 'level' && 'border-white bg-gradient-to-r from-sun to-orange px-6 py-2.5 text-[1.125rem] text-ink',
-          )}
-        >
-          {t.text}
-        </div>
-      ))}
+      {list.map((t) => {
+        const { icon, body } = splitIcon(t.text, t.tone)
+        return (
+          <div
+            key={t.id}
+            className={cx(
+              'shine-sweep flex animate-pop items-center gap-2 rounded-full border-2 py-1 pl-1 pr-4 text-[0.875rem] font-black shadow-[0_6px_18px_rgba(16,18,51,0.3)]',
+              t.tone === 'good' && 'border-white bg-gradient-to-b from-[#2FA594] to-teal text-white',
+              t.tone === 'bad' && 'border-white bg-gradient-to-b from-[#FF7F78] to-coral text-white',
+              t.tone === 'info' && 'border-white bg-gradient-to-b from-[#3B3E73] to-ink text-white',
+              t.tone === 'level' && 'border-white bg-gradient-to-r from-sun to-orange py-1.5 pl-1.5 pr-6 text-[1.125rem] text-ink',
+            )}
+          >
+            <span className={cx('grid shrink-0 place-items-center rounded-full bg-white/25 ring-2 ring-white/40', t.tone === 'level' ? 'size-9 text-[1.25rem]' : 'size-7 text-[1rem]')}>{icon}</span>
+            {body}
+          </div>
+        )
+      })}
     </div>
   )
 }

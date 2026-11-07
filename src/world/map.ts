@@ -21,8 +21,8 @@ export function screenToTile(sx: number, sy: number): { x: number; y: number } {
 
 export type Ground = 'grass' | 'road' | 'plaza' | 'path' | 'water' | 'sand' | 'soil'
 
-export type BuildingId = 'shop' | 'workshop' | 'market' | 'academy' | 'company' | 'support' | 'board'
-export type HitId = BuildingId | `rival:${number}` | `plot:${string}`
+export type BuildingId = 'shop' | 'workshop' | 'market' | 'academy' | 'company' | 'support' | 'board' | 'tree'
+export type HitId = BuildingId | `rival:${number}` | `plot:${string}` | `npc:${number}`
 
 export interface BuildingDef {
   id: BuildingId
@@ -72,6 +72,7 @@ export const BUILDINGS: BuildingDef[] = [
   { id: 'support', name: '창업지원센터', x: 6, y: 1, w: 2, d: 2, door: { x: 7, y: 3 }, doorSide: 'y', desc: '지원사업 · 정책자금 · 세금 신고' },
   { id: 'company', name: '골목상사', x: 8, y: 12, w: 3, d: 3, door: { x: 11, y: 13 }, doorSide: 'x', desc: '입사 · 출근 · 승진' },
   { id: 'board', name: '마을 게시판', x: 10, y: 7, w: 1, d: 1, door: { x: 10, y: 8 }, doorSide: 'y', desc: '퀘스트 · 랭킹 · 동네 소식' },
+  { id: 'tree', name: '배움 나무', x: 13, y: 8, w: 1, d: 1, door: { x: 13, y: 9 }, doorSide: 'y', desc: '레슨을 끝낼 때마다 자라는 나무' },
 ]
 
 export const BUILDING_MAP = Object.fromEntries(BUILDINGS.map((b) => [b.id, b])) as Record<BuildingId, BuildingDef>
@@ -226,7 +227,7 @@ export const DECOS: DecoDef[] = [
   { kind: 'lamp', x: 13, y: 2 },
   { kind: 'bench', x: 10, y: 10 },
   { kind: 'bench', x: 14, y: 8 },
-  { kind: 'well', x: 13, y: 7 },
+  { kind: 'flowers', x: 13, y: 7, v: 3 },
   { kind: 'cart', x: 2, y: 8 },
   { kind: 'rock', x: 5, y: 18 },
   { kind: 'rock', x: 0, y: 14 },

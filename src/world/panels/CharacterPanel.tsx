@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Download, Pause, Play, RotateCcw, Shuffle } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Download, Lock, Pause, Play, RotateCcw, Shuffle } from 'lucide-react'
 import { useGame } from '@/game/store'
 import { CharacterArt, type Act, type Expr, type Pose } from '../render/Character'
 import { WorldDefs } from '../render/Defs'
@@ -30,6 +30,9 @@ import {
   type Role,
 } from '../avatar'
 import { cx, GameButton, Panel, Tabs, toast } from '../ui/kit'
+import { useApp } from '@/store/app'
+import { lockedCosmetics } from '../learn'
+import { sfx } from '../audio'
 
 const FONT = 'Pretendard Variable, Pretendard, "Noto Sans KR", sans-serif'
 
@@ -108,7 +111,11 @@ export function Turntable({ look, size = 190, controls = true }: { look: Look; s
                 ['stretch', '기지개'],
               ] as const
             ).map(([m, label]) => (
-              <button key={m} onClick={() => (m === 'idle' || m === 'walk' ? setMotion(m) : play(m))} className={cx('h-7 rounded-lg px-2 text-[0.6875rem] font-black', motion === m ? 'bg-ink text-white' : 'bg-black/5')}>
+              <button
+                key={m}
+                onClick={() => (m === 'idle' || m === 'walk' ? setMotion(m) : play(m))}
+                className={cx('h-7 rounded-lg px-2 text-[0.6875rem] font-black', motion === m ? 'bg-ink text-white' : 'bg-black/5')}
+              >
                 {label}
               </button>
             ))}
@@ -128,29 +135,68 @@ function MiniHead({ look }: { look: Look }) {
   )
 }
 
-function Swatches({ list, value, onPick }: { list: string[]; value: string; onPick: (c: string) => void }) {
+function lockedToast(course: string) {
+  sfx('wrong')
+  toast(`🔒 배움터 "${course}" 챕터를 깨면 열려요`, 'info')
+}
+
+function Swatches({ list, value, onPick, locked }: { list: string[]; value: string; onPick: (c: string) => void; locked?: Map<string, string> }) {
   return (
     <div className="flex flex-wrap gap-1.5">
-      {list.map((c) => (
-        <button key={c} aria-label={c} onClick={() => onPick(c)} className={cx('size-8 rounded-full border-2 border-white shadow ring-offset-1', value === c && 'ring-[3px] ring-primary')} style={{ background: c }} />
-      ))}
+      {list.map((c) => {
+        const lock = value !== c ? locked?.get(c) : undefined
+        return (
+          <button
+            key={c}
+            aria-label={lock ? `${c} (잠김)` : c}
+            onClick={() => (lock ? lockedToast(lock) : (sfx('tap'), onPick(c)))}
+            className={cx('relative grid size-8 place-items-center rounded-full border-2 border-white shadow ring-offset-1', value === c && 'ring-[3px] ring-primary')}
+            style={{ background: c }}
+          >
+            {lock && (
+              <span className="absolute inset-0 grid place-items-center rounded-full bg-black/45">
+                <Lock className="size-3.5 text-white" strokeWidth={3} />
+              </span>
+            )}
+          </button>
+        )
+      })}
     </div>
   )
 }
 
-function Choices({ names, value, onPick, preview }: { names: string[]; value: number; onPick: (i: number) => void; preview?: (i: number) => Look }) {
+function Choices({ names, value, onPick, preview, locked }: { names: string[]; value: number; onPick: (i: number) => void; preview?: (i: number) => Look; locked?: Map<number, string> }) {
   return (
     <div className="flex flex-wrap gap-1.5">
-      {names.map((n, i) => (
-        <button key={n} onClick={() => onPick(i)} className={cx('flex items-center gap-1 rounded-xl py-0.5 pl-0.5 pr-2.5 text-[0.75rem] font-black', value === i ? 'bg-ink text-white' : 'bg-black/5', !preview && 'h-8 pl-2.5')}>
-          {preview && (
-            <span className={cx('grid place-items-center rounded-lg', value === i ? 'bg-white/90' : 'bg-white')}>
-              <MiniHead look={preview(i)} />
-            </span>
-          )}
-          {n}
-        </button>
-      ))}
+      {names.map((n, i) => {
+        const lock = value !== i ? locked?.get(i) : undefined
+        return (
+          <button
+            key={n}
+            onClick={() => (lock ? lockedToast(lock) : (sfx('tap'), onPick(i)))}
+            className={cx(
+              'relative flex items-center gap-1 rounded-xl py-0.5 pl-0.5 pr-2.5 text-[0.75rem] font-black',
+              value === i ? 'bg-ink text-white' : 'bg-black/5',
+              !preview && 'h-8 pl-2.5',
+              lock && 'text-black/35',
+            )}
+          >
+            {preview && (
+              <span className={cx('relative grid place-items-center rounded-lg', value === i ? 'bg-white/90' : 'bg-white')}>
+                <span className={cx(lock && 'opacity-40 grayscale')}>
+                  <MiniHead look={preview(i)} />
+                </span>
+                {lock && (
+                  <span className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-ink ring-2 ring-white">
+                    <Lock className="size-2.5 text-[#FFE27A]" strokeWidth={3.5} />
+                  </span>
+                )}
+              </span>
+            )}
+            {n}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -166,6 +212,17 @@ type EditTab = 'face' | 'hair' | 'acc' | 'cloth'
 
 export function CharacterEditor({ value, onChange, role, name, onName }: { value: Avatar; onChange: (a: Avatar) => void; role: Role; name?: string; onName?: (n: string) => void }) {
   const [tab, setTab] = useState<EditTab>('hair')
+  const progress = useApp((s) => s.progress)
+  const locked = useMemo(() => lockedCosmetics(progress), [progress])
+  /** 잠긴 아이템은 빼고 랜덤 */
+  const unlockRandom = () => {
+    const a = randomAvatar()
+    if (locked.hats.has(a.hat)) a.hat = 0
+    if (locked.glasses.has(a.glasses)) a.glasses = 0
+    if (locked.hairColors.has(a.hairColor)) a.hairColor = DEFAULT_AVATAR.hairColor
+    sfx('pop')
+    onChange(a)
+  }
   const look = toLook(value, role)
   const set = (p: Partial<Avatar>) => onChange({ ...look, ...p })
   const v = (p: Partial<Avatar>) => toLook({ ...look, ...p }, role)
@@ -174,10 +231,16 @@ export function CharacterEditor({ value, onChange, role, name, onName }: { value
       <div className="flex flex-col items-center gap-2">
         <Turntable look={look} size={170} />
         {onName && (
-          <input value={name ?? ''} onChange={(e) => onName(e.target.value)} maxLength={8} placeholder="이름 (예: 김사장)" className="h-10 w-[11rem] rounded-xl border-2 border-black/10 bg-white px-3 text-center text-[0.9375rem] font-black outline-none focus:border-primary" />
+          <input
+            value={name ?? ''}
+            onChange={(e) => onName(e.target.value)}
+            maxLength={8}
+            placeholder="이름 (예: 김사장)"
+            className="h-10 w-[11rem] rounded-xl border-2 border-black/10 bg-white px-3 text-center text-[0.9375rem] font-black outline-none focus:border-primary"
+          />
         )}
         <div className="flex gap-1.5">
-          <GameButton size="sm" tone="violet" onClick={() => onChange(randomAvatar())}>
+          <GameButton size="sm" tone="violet" onClick={unlockRandom}>
             <Shuffle className="size-3.5" /> 랜덤
           </GameButton>
           <GameButton size="sm" tone="white" onClick={() => onChange({ ...DEFAULT_AVATAR })}>
@@ -206,7 +269,7 @@ export function CharacterEditor({ value, onChange, role, name, onName }: { value
               <Choices names={HAIR_STYLES} value={look.hair} onPick={(i) => set({ hair: i })} preview={(i) => v({ hair: i, hat: 0 })} />
             </Row>
             <Row label="머리 색">
-              <Swatches list={HAIR_COLORS} value={look.hairColor} onPick={(c) => set({ hairColor: c })} />
+              <Swatches list={HAIR_COLORS} value={look.hairColor} onPick={(c) => set({ hairColor: c })} locked={locked.hairColors} />
             </Row>
           </>
         )}
@@ -235,10 +298,15 @@ export function CharacterEditor({ value, onChange, role, name, onName }: { value
         {tab === 'acc' && (
           <>
             <Row label="모자">
-              <Choices names={HATS} value={look.hat} onPick={(i) => set({ hat: i })} preview={(i) => v({ hat: i })} />
+              <Choices names={HATS} value={look.hat} onPick={(i) => set({ hat: i })} preview={(i) => v({ hat: i })} locked={locked.hats} />
             </Row>
             <Row label="안경">
-              <Choices names={GLASSES} value={look.glasses} onPick={(i) => set({ glasses: i })} preview={(i) => v({ glasses: i })} />
+              <Choices names={GLASSES} value={look.glasses} onPick={(i) => set({ glasses: i })} preview={(i) => v({ glasses: i })} locked={locked.glasses} />
+            </Row>
+            <Row label="🎁 배움터 보물상자에서 얻는 꾸미기">
+              <p className="text-[0.6875rem] font-semibold text-sub">
+                🔒 표시는 배움터 챕터를 모두 깨고 보물상자를 열면 생겨요. 지금 {locked.hats.size + locked.glasses.size + locked.hairColors.size}개 남았어요.
+              </p>
             </Row>
           </>
         )}
@@ -259,7 +327,10 @@ export function CharacterEditor({ value, onChange, role, name, onName }: { value
             <Row label="신발">
               <Swatches list={SHOE_COLORS} value={look.shoes} onPick={(c) => set({ shoes: c })} />
             </Row>
-            <p className="text-[0.6875rem] font-semibold text-mute">{role === 'owner' ? '사장님은 앞치마를, ' : role === 'employee' ? '직장인은 셔츠 깃·넥타이·사원증을, ' : ''}진로에 맞춰 자동으로 걸쳐요.</p>
+            <p className="text-[0.6875rem] font-semibold text-mute">
+              {role === 'owner' ? '사장님은 앞치마를, ' : role === 'employee' ? '직장인은 셔츠 깃·넥타이·사원증을, ' : ''}
+              진로에 맞춰 자동으로 걸쳐요.
+            </p>
           </>
         )}
       </div>
@@ -298,7 +369,23 @@ async function saveSvgAsPng(svg: SVGSVGElement, fileName: string, w: number, h: 
   }
 }
 
-function T({ x, y, size = 12, w = 700, fill = '#2A2140', anchor = 'start', children }: { x: number; y: number; size?: number; w?: number; fill?: string; anchor?: 'start' | 'middle' | 'end'; children: ReactNode }) {
+function T({
+  x,
+  y,
+  size = 12,
+  w = 700,
+  fill = '#2A2140',
+  anchor = 'start',
+  children,
+}: {
+  x: number
+  y: number
+  size?: number
+  w?: number
+  fill?: string
+  anchor?: 'start' | 'middle' | 'end'
+  children: ReactNode
+}) {
   return (
     <text x={x} y={y} fontSize={size} fontWeight={w} fill={fill} textAnchor={anchor} fontFamily={FONT}>
       {children}
@@ -485,7 +572,22 @@ export function CastSheet({ me }: { me: { look: Look; name: string; title: strin
   const ref = useRef<SVGSVGElement>(null)
   const W = 1000
   const H = 420
-  const cast = [{ look: me.look, name: me.name, job: me.title, scale: 1, line: '오늘도 힘내 보자!' }, ...VILLAGERS.map((v) => ({ look: v.look, name: v.name, job: v.job, scale: v.scale, line: v.lines[0] }))]
+  const cast = [
+    {
+      look: me.look,
+      name: me.name,
+      job: me.title,
+      scale: 1,
+      line: '오늘도 힘내 보자!',
+    },
+    ...VILLAGERS.map((v) => ({
+      look: v.look,
+      name: v.name,
+      job: v.job,
+      scale: v.scale,
+      line: v.lines[0],
+    })),
+  ]
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-2">

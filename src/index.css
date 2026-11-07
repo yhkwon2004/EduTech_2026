@@ -390,6 +390,474 @@
     box-shadow: var(--shadow-press);
   }
 
+  /* ── 화면 이펙트 (fx.tsx) ── */
+  .fx-flash {
+    animation: fx-flash 0.45s ease-out forwards;
+  }
+  @keyframes fx-flash {
+    0% {
+      transform: scale(0.3);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(2.2);
+      opacity: 0;
+    }
+  }
+  .fx-particle {
+    left: 0;
+    top: 0;
+    animation: fx-particle 0.85s cubic-bezier(0.15, 0.8, 0.3, 1) forwards;
+  }
+  @keyframes fx-particle {
+    0% {
+      transform: scale(0.4) rotate(0deg);
+      opacity: 1;
+    }
+    70% {
+      opacity: 1;
+    }
+    100% {
+      transform: translate(var(--dx), calc(var(--dy) + 14px)) scale(0.9) rotate(200deg);
+      opacity: 0;
+    }
+  }
+  .fx-float {
+    animation: fx-float 1.3s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+  }
+  @keyframes fx-float {
+    0% {
+      transform: translateY(6px) scale(0.6);
+      opacity: 0;
+    }
+    18% {
+      transform: translateY(-8px) scale(1.15);
+      opacity: 1;
+    }
+    30% {
+      transform: translateY(-12px) scale(1);
+    }
+    100% {
+      transform: translateY(-54px) scale(1);
+      opacity: 0;
+    }
+  }
+  .fx-ring {
+    animation: fx-ring 0.7s ease-out forwards;
+  }
+  @keyframes fx-ring {
+    from {
+      transform: scale(0.2);
+      opacity: 1;
+    }
+    to {
+      transform: scale(1.8);
+      opacity: 0;
+    }
+  }
+  .fx-confetti {
+    animation-name: fx-confetti;
+    animation-timing-function: cubic-bezier(0.3, 0.4, 0.6, 1);
+    animation-fill-mode: forwards;
+  }
+  @keyframes fx-confetti {
+    0% {
+      transform: translate(0, -10px) rotate(0deg) rotateY(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translate(30px, 110vh) rotate(540deg) rotateY(720deg);
+      opacity: 0.9;
+    }
+  }
+
+  /* ── 패널 닫힘 ── */
+  .panel-out {
+    animation: panel-out 170ms ease-in forwards;
+  }
+  @keyframes panel-out {
+    to {
+      transform: translateY(14px) scale(0.97);
+      opacity: 0;
+    }
+  }
+  .fade-out {
+    animation: fade-out 170ms ease-in forwards;
+  }
+  @keyframes fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  /* ── 배움터 게임 ── */
+  .node-bounce {
+    animation: node-bounce 1.2s ease-in-out infinite;
+  }
+  @keyframes node-bounce {
+    0%,
+    100% {
+      transform: translateY(0) scale(1);
+    }
+    50% {
+      transform: translateY(-5px) scale(1.04);
+    }
+  }
+  .node-glow {
+    animation: node-glow 1.8s ease-in-out infinite;
+  }
+  @keyframes node-glow {
+    0%,
+    100% {
+      box-shadow:
+        0 0 0 0 rgba(255, 211, 90, 0.75),
+        0 4px 0 rgba(32, 34, 68, 0.3);
+    }
+    50% {
+      box-shadow:
+        0 0 0 10px rgba(255, 211, 90, 0),
+        0 4px 0 rgba(32, 34, 68, 0.3);
+    }
+  }
+  .star-pop {
+    animation: star-pop 0.55s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+  }
+  @keyframes star-pop {
+    0% {
+      transform: scale(0) rotate(-40deg);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+  }
+  .shake {
+    animation: shake 0.42s ease-in-out;
+  }
+  @keyframes shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20% {
+      transform: translateX(-7px);
+    }
+    40% {
+      transform: translateX(6px);
+    }
+    60% {
+      transform: translateX(-4px);
+    }
+    80% {
+      transform: translateX(2px);
+    }
+  }
+  .correct-pulse {
+    animation: correct-pulse 0.5s ease-out;
+  }
+  @keyframes correct-pulse {
+    0% {
+      transform: scale(1);
+    }
+    40% {
+      transform: scale(1.04);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  .heart-break {
+    animation: heart-break 0.6s ease-in forwards;
+  }
+  @keyframes heart-break {
+    0% {
+      transform: scale(1);
+    }
+    30% {
+      transform: scale(1.35);
+    }
+    100% {
+      transform: scale(0.85) translateY(3px);
+      filter: grayscale(1);
+      opacity: 0.35;
+    }
+  }
+  .card-in {
+    animation: card-in 0.42s cubic-bezier(0.2, 0.9, 0.25, 1.05) both;
+  }
+  @keyframes card-in {
+    0% {
+      transform: perspective(900px) rotateY(-70deg) translateX(30px);
+      opacity: 0;
+    }
+    100% {
+      transform: perspective(900px) rotateY(0) translateX(0);
+      opacity: 1;
+    }
+  }
+  .chest-shake {
+    animation: chest-shake 0.9s ease-in-out infinite;
+    transform-origin: 50% 90%;
+  }
+  @keyframes chest-shake {
+    0%,
+    60%,
+    100% {
+      transform: rotate(0deg) scale(1);
+    }
+    70% {
+      transform: rotate(-7deg) scale(1.06);
+    }
+    80% {
+      transform: rotate(7deg) scale(1.06);
+    }
+    90% {
+      transform: rotate(-3deg) scale(1.03);
+    }
+  }
+  .chest-open {
+    animation: chest-open 0.7s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+  }
+  @keyframes chest-open {
+    0% {
+      transform: scale(0.4) rotate(-10deg);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1) rotate(0);
+      opacity: 1;
+    }
+  }
+  .shine-sweep {
+    position: relative;
+    overflow: hidden;
+  }
+  .shine-sweep::after {
+    content: '';
+    position: absolute;
+    inset: -40% auto -40% -60%;
+    width: 40%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+    transform: skewX(-18deg);
+    animation: shine-sweep 2.8s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes shine-sweep {
+    0%,
+    55% {
+      left: -60%;
+    }
+    100% {
+      left: 130%;
+    }
+  }
+  .rays-spin {
+    background: repeating-conic-gradient(from 0deg, rgba(255, 236, 160, 0.55) 0deg 10deg, transparent 10deg 24deg);
+    mask-image: radial-gradient(closest-side, #000 30%, transparent 100%);
+    animation: rays-spin 9s linear infinite;
+  }
+  @keyframes rays-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .combo-pop {
+    animation: combo-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+  }
+  @keyframes combo-pop {
+    0% {
+      transform: scale(0.3) rotate(-12deg);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1) rotate(-4deg);
+      opacity: 1;
+    }
+  }
+  .count-bump {
+    animation: count-bump 0.45s cubic-bezier(0.2, 1.5, 0.4, 1);
+  }
+  @keyframes count-bump {
+    0% {
+      transform: scale(1);
+    }
+    35% {
+      transform: scale(1.18);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  .silhouette {
+    filter: brightness(0) opacity(0.18);
+  }
+  .float-soft {
+    animation: float-soft 3.2s ease-in-out infinite;
+  }
+  @keyframes float-soft {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
+  }
+  .march {
+    animation: march linear infinite;
+  }
+  @keyframes march {
+    from {
+      transform: translateX(-12vw);
+    }
+    to {
+      transform: translateX(112vw);
+    }
+  }
+
+  /* ── 마을 생기 ── */
+  .dust {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: dust 0.6s ease-out forwards;
+  }
+  @keyframes dust {
+    0% {
+      transform: scale(0.4) translateY(0);
+      opacity: 0.75;
+    }
+    100% {
+      transform: scale(1.5) translateY(-5px);
+      opacity: 0;
+    }
+  }
+  .route-dot {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: route-dot 1.1s ease-in-out infinite;
+  }
+  @keyframes route-dot {
+    0%,
+    100% {
+      opacity: 0.45;
+      transform: scale(0.8);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+  }
+  .flutter {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: flutter 0.22s ease-in-out infinite alternate;
+  }
+  @keyframes flutter {
+    from {
+      transform: scaleX(1);
+    }
+    to {
+      transform: scaleX(0.25);
+    }
+  }
+  .flap {
+    transform-box: fill-box;
+    transform-origin: center bottom;
+    animation: flap 0.36s ease-in-out infinite alternate;
+  }
+  @keyframes flap {
+    from {
+      transform: scaleY(1);
+    }
+    to {
+      transform: scaleY(-0.6);
+    }
+  }
+  .firefly {
+    animation: firefly 3.4s ease-in-out infinite;
+  }
+  @keyframes firefly {
+    0%,
+    100% {
+      opacity: 0.1;
+      transform: translate(0, 0);
+    }
+    30% {
+      opacity: 1;
+    }
+    50% {
+      transform: translate(9px, -12px);
+    }
+    70% {
+      opacity: 0.9;
+    }
+    85% {
+      transform: translate(-6px, -4px);
+    }
+  }
+  .twinkle {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: twinkle 2.6s ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%,
+    100% {
+      opacity: 0;
+      transform: scale(0.3) rotate(0deg);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1) rotate(45deg);
+    }
+  }
+  .bldg-bounce {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: bldg-bounce 0.42s cubic-bezier(0.2, 1.6, 0.4, 1);
+  }
+  @keyframes bldg-bounce {
+    0% {
+      transform: scale(1, 1);
+    }
+    30% {
+      transform: scale(1.04, 0.95);
+    }
+    60% {
+      transform: scale(0.98, 1.03);
+    }
+    100% {
+      transform: scale(1, 1);
+    }
+  }
+  .leaf-sway {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: leaf-sway 5s ease-in-out infinite;
+  }
+  @keyframes leaf-sway {
+    0%,
+    100% {
+      transform: rotate(-1.2deg) scale(1);
+    }
+    50% {
+      transform: rotate(1.2deg) scale(1.015);
+    }
+  }
+  .glow-pulse {
+    animation: glow-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes glow-pulse {
+    0%,
+    100% {
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

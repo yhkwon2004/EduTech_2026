@@ -13,6 +13,8 @@ import { ShopPanel } from './ShopPanel'
 import { SupportPanel } from './SupportPanel'
 import { WorkshopPanel } from './WorkshopPanel'
 import { CharacterPanel } from './CharacterPanel'
+import { TreePanel } from './TreePanel'
+import { NpcQuizPanel } from './NpcQuizPanel'
 
 export type MenuId = 'bag' | 'quest' | 'rank' | 'settings' | 'character'
 export interface PanelState {
@@ -46,6 +48,7 @@ export function PanelRouter({
 
   if (hit.startsWith('plot:')) return <FarmPanel plotId={hit.slice(5)} onClose={onClose} goMarket={() => walk('market')} />
   if (hit.startsWith('rival:')) return <RivalPanel index={Number(hit.slice(6))} onClose={onClose} />
+  if (hit.startsWith('npc:')) return <NpcQuizPanel villager={Number(hit.slice(4))} onClose={onClose} openLesson={openLesson} />
 
   switch (hit) {
     case 'shop':
@@ -73,6 +76,8 @@ export function PanelRouter({
           }}
         />
       )
+    case 'tree':
+      return <TreePanel onClose={onClose} goAcademy={() => walk('academy')} openLesson={openLesson} />
     case 'bag':
       return <BagPanel onClose={onClose} />
     case 'settings':

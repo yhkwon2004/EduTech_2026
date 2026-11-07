@@ -11,6 +11,9 @@ import { VILLAGERS, toLook } from '../avatar'
 import { useEmote, ACT_MS } from '../emote'
 import { energyNow } from '../store'
 import { WorldDefs } from './Defs'
+import { LearnTreeArt } from './Tree'
+import { useApp } from '@/store/app'
+import { npcQuizLeft, treeStage } from '../learn'
 import { hash, rng } from '@/lib/rng'
 import { todayKey } from '@/lib/date'
 
@@ -114,6 +117,7 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
   const role = world.path === 'employee' ? 'employee' : 'owner'
   const look: Look = useMemo(() => toLook(world.avatar, role), [world.avatar, role])
   const level = levelOf(world.exp).level
+  const doneLessons = useApp((s) => Object.values(s.progress).filter((p) => p.done).length)
   const hour = new Date(now).getHours()
   const night = hour >= 19 || hour < 6
 
@@ -137,10 +141,12 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
   }, [])
 
   // ── 마을 사람들 (NPC)
-  type Npc = Walker & { hidden: number; goal: { x: number; y: number }; rush?: boolean; greetAt: number; vi: number }
+  type Npc = Walker & { hidden: number; goal: { x: number; y: number }; rush?: boolean; greetAt: number; vi: number; quiz?: boolean }
   const npcs = useRef<Npc[]>([])
   const npcEls = useRef<(SVGGElement | null)[]>([])
   const [npcViews, setNpcViews] = useState<CharView[]>([])
+  const [quizNpc, setQuizNpc] = useState<number | null>(null)
+  const nextQuizAt = useRef(performance.now() + 14000)
   const npcViewsRef = useRef(npcViews)
   const doors = useMemo(() => [...RIVAL_LOTS.map((r) => r.door), BUILDING_MAP.shop.door, BUILDING_MAP.market.door, BUILDING_MAP.academy.door], [])
   useEffect(() => {
@@ -284,7 +290,17 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
           if (pending.current) {
             const hit = pending.current
             pending.current = null
-            onArriveRef.current(hit)
+            if (hit.startsWith('npc:')) {
+              const n = npcs.current[Number(hit.slice(4))]
+              if (n) {
+                n.quiz = false
+                n.pauseUntil = t + 1200
+                n.target = (Math.atan2(p.x - n.x - (p.y - n.y), p.x - n.x + (p.y - n.y)) * 180) / Math.PI
+                p.target = (Math.atan2(n.x - p.x - (n.y - p.y), n.x - p.x + (n.y - p.y)) * 180) / Math.PI
+                setQuizNpc(null)
+                onArriveRef.current(`npc:${n.vi}`)
+              }
+            } else onArriveRef.current(hit)
           }
         }
         // 마을 사람들
@@ -313,14 +329,14 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
           expire(n, t)
           // 내 캐릭터 가까이 오면 인사
           const near = Math.hypot(n.x - p.x, n.y - p.y) < 2.3
-          if (n.hidden <= 0 && near && t > n.greetAt) {
+          if (n.hidden <= 0 && near && t > n.greetAt && !n.quiz) {
             n.greetAt = t + 30000
             n.pauseUntil = t + 1800
             n.target = (Math.atan2(p.x - n.x - (p.y - n.y), p.x - n.x + (p.y - n.y)) * 180) / Math.PI
             startAct(n, 'wave', t, 'happy')
             n.bubble = '👋'
             n.bubbleUntil = t + 1800
-          } else if (n.hidden <= 0 && n.walking && t > n.nextIdle) {
+          } else if (n.hidden <= 0 && n.walking && t > n.nextIdle && !n.quiz) {
             // 가다가 멈춰서 혼잣말·두리번
             n.nextIdle = t + 9000 + Math.random() * 12000
             n.pauseUntil = t + 2200
@@ -349,6 +365,30 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
           npcViewsRef.current = views
           setNpcViews(views)
         }
+        // 가끔 동네 사람이 ❓ 퀴즈를 들고 멈춰 서요
+        const asking = npcs.current.findIndex((n) => n.quiz)
+        if (asking >= 0) {
+          const n = npcs.current[asking]
+          if (t > n.pauseUntil || n.hidden > 0) {
+            n.quiz = false
+            n.bubble = null
+            setQuizNpc(null)
+          }
+        } else if (t > nextQuizAt.current) {
+          nextQuizAt.current = t + 40000 + Math.random() * 35000
+          const left = npcQuizLeft(useApp.getState().npcQuiz, todayKey())
+          const cands = npcs.current.map((n, i) => ({ n, i })).filter(({ n }) => n.hidden <= 0 && !n.rush && Math.hypot(n.x - p.x, n.y - p.y) < 11)
+          if (left > 0 && cands.length) {
+            const { n, i } = cands[Math.floor(Math.random() * cands.length)]
+            n.quiz = true
+            n.pauseUntil = t + 45000
+            n.walking = false
+            n.bubble = null
+            n.target = n.yaw >= 0 ? 25 : -25
+            startAct(n, 'wave', t, 'happy')
+            setQuizNpc(i)
+          }
+        }
         // 카메라 따라가기
         const c = cam.current
         if (c.follow) {
@@ -365,6 +405,30 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     raf = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(raf)
   }, [applyCamera, doors, paused, pushPlayer])
+
+  /** 걸어갈 칸: NPC는 지금 서 있는 곳 옆 */
+  const targetOf = useCallback((hit: HitId) => {
+    if (hit.startsWith('npc:')) {
+      const n = npcs.current[Number(hit.slice(4))]
+      if (!n) return null
+      const nx = Math.round(n.x)
+      const ny = Math.round(n.y)
+      const p = player.current
+      const near = [
+        [0, 1],
+        [1, 0],
+        [-1, 0],
+        [0, -1],
+        [1, 1],
+        [-1, 1],
+      ]
+        .map(([dx, dy]) => ({ x: nx + dx, y: ny + dy }))
+        .filter((c) => walkable(c.x, c.y))
+        .sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))
+      return near[0] ?? { x: nx, y: ny }
+    }
+    return doorOf(hit)
+  }, [])
 
   const walkToTile = useCallback((tile: { x: number; y: number }, hit: HitId | null) => {
     const p = player.current
@@ -387,7 +451,7 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     ref,
     () => ({
       walkTo: (hit) => {
-        const d = doorOf(hit)
+        const d = targetOf(hit)
         if (d) walkToTile(d, hit)
       },
       recenter: () => {
@@ -408,7 +472,7 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
         })
       },
     }),
-    [walkToTile],
+    [walkToTile, targetOf],
   )
 
   // ── 입력: 드래그 = 카메라 이동, 탭 = 걷기/상호작용
@@ -440,7 +504,7 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     const hitEl = el?.closest('[data-hit]')
     if (hitEl) {
       const hit = hitEl.getAttribute('data-hit') as HitId
-      const door = doorOf(hit)
+      const door = targetOf(hit)
       if (door) walkToTile(door, hit)
       return
     }
@@ -489,6 +553,9 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
         break
       case 'board':
         art = <BoardArt />
+        break
+      case 'tree':
+        art = <LearnTreeArt x={b.x} y={b.y} stage={treeStage(doneLessons).index} night={night} />
         break
     }
     items.push({
@@ -553,6 +620,7 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
           scale={vill.scale}
           seed={i + 3}
           speed={0.72}
+          quiz={quizNpc === i && !t.hidden ? `npc:${i}` : undefined}
         />
       ),
     })

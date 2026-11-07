@@ -12,14 +12,30 @@ import { useWorld, levelOf } from '../store'
 import { CROPS, itemInfo } from '../items'
 import { RIVAL_PLACEHOLDER } from '../map'
 import { Bar, Card, Chip, cx, GameButton, Panel, Tabs, toast, won } from '../ui/kit'
+import { setAudio, sfx } from '../audio'
 
 /* ───────── 이웃 가게 (경쟁 상대 관찰) ───────── */
 const COUNTER: Record<Personality, { watch: string; counter: string }> = {
-  price: { watch: '가격표를 보세요. 동네 평균보다 싸게 팔아 손님을 끌어요.', counter: '가격으로 맞서면 둘 다 손해예요. 품질·서비스·단골 혜택으로 차별화해요.' },
-  quality: { watch: '재료와 손맛에 공을 들여 평판이 높아요.', counter: '레슨으로 품질을 올리고, 위생·응대에서 밀리지 않게 챙겨요.' },
-  marketing: { watch: '전단지·SNS 등 홍보를 자주 해서 인지도가 높아요.', counter: '지도 정보 정리 같은 무료 홍보를 꾸준히, 리뷰 답글로 신뢰를 쌓아요.' },
-  steady: { watch: '큰 이벤트는 없지만 매일 같은 품질로 단골이 탄탄해요.', counter: '품절·폐기를 줄이는 준비량 관리로 하루하루 이익을 쌓아요.' },
-  trendy: { watch: 'SNS에서 뜨면 손님이 확 몰리지만 기복이 커요.', counter: '유행이 꺾이는 날을 노려 신메뉴·이벤트로 손님을 데려와요.' },
+  price: {
+    watch: '가격표를 보세요. 동네 평균보다 싸게 팔아 손님을 끌어요.',
+    counter: '가격으로 맞서면 둘 다 손해예요. 품질·서비스·단골 혜택으로 차별화해요.',
+  },
+  quality: {
+    watch: '재료와 손맛에 공을 들여 평판이 높아요.',
+    counter: '레슨으로 품질을 올리고, 위생·응대에서 밀리지 않게 챙겨요.',
+  },
+  marketing: {
+    watch: '전단지·SNS 등 홍보를 자주 해서 인지도가 높아요.',
+    counter: '지도 정보 정리 같은 무료 홍보를 꾸준히, 리뷰 답글로 신뢰를 쌓아요.',
+  },
+  steady: {
+    watch: '큰 이벤트는 없지만 매일 같은 품질로 단골이 탄탄해요.',
+    counter: '품절·폐기를 줄이는 준비량 관리로 하루하루 이익을 쌓아요.',
+  },
+  trendy: {
+    watch: 'SNS에서 뜨면 손님이 확 몰리지만 기복이 커요.',
+    counter: '유행이 꺾이는 날을 노려 신메뉴·이벤트로 손님을 데려와요.',
+  },
 }
 
 const visitedToday = new Set<string>()
@@ -168,14 +184,22 @@ export function BagPanel({ onClose }: { onClose: () => void }) {
       }
       footer={
         <p className="text-[0.75rem] font-semibold text-sub">
-          🪙 {won(w.cash)}원 {w.loan > 0 && `· 대출 ${won(w.loan)}원`} · Lv{levelOf(w.exp).level} · EXP {w.exp.toLocaleString()}
+          🪙 {won(w.cash)}원 {w.loan > 0 && `· 대출 ${won(w.loan)}원`} · Lv
+          {levelOf(w.exp).level} · EXP {w.exp.toLocaleString()}
         </p>
       }
     >
       <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
-        {tab === 'items' && (items.length ? items.map(([id, n]) => <Tile key={id} emoji={itemInfo(id).emoji} name={itemInfo(id).name} n={n} sub={`${itemInfo(id).price.toLocaleString()}원`} />) : empty('비어 있어요. 텃밭에서 수확하거나 도매시장에서 사 오세요.'))}
-        {tab === 'seeds' && (seeds.length ? seeds.map((c) => <Tile key={c.id} emoji={c.emoji} name={`${c.name} 씨앗`} n={w.seeds[c.id]} sub={c.paddy ? '논' : '밭'} />) : empty('씨앗이 없어요. 도매시장에서 사 오세요.'))}
-        {tab === 'stock' && g.products.map((p) => <Tile key={p.id} emoji={p.emoji} name={p.name} n={w.stock[p.id] ?? 0} sub={p.kind === 'service' ? '서비스' : p.perishable ? '당일 판매' : '보관 가능'} />)}
+        {tab === 'items' &&
+          (items.length
+            ? items.map(([id, n]) => <Tile key={id} emoji={itemInfo(id).emoji} name={itemInfo(id).name} n={n} sub={`${itemInfo(id).price.toLocaleString()}원`} />)
+            : empty('비어 있어요. 텃밭에서 수확하거나 도매시장에서 사 오세요.'))}
+        {tab === 'seeds' &&
+          (seeds.length
+            ? seeds.map((c) => <Tile key={c.id} emoji={c.emoji} name={`${c.name} 씨앗`} n={w.seeds[c.id]} sub={c.paddy ? '논' : '밭'} />)
+            : empty('씨앗이 없어요. 도매시장에서 사 오세요.'))}
+        {tab === 'stock' &&
+          g.products.map((p) => <Tile key={p.id} emoji={p.emoji} name={p.name} n={w.stock[p.id] ?? 0} sub={p.kind === 'service' ? '서비스' : p.perishable ? '당일 판매' : '보관 가능'} />)}
       </div>
       {tab === 'record' && (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -210,7 +234,12 @@ export function SettingsPanel({ onClose, onCharacter }: { onClose: () => void; o
             🎨 캐릭터 꾸미기 · 시트
           </GameButton>
           <div className="flex gap-1">
-            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={8} className="h-9 w-28 rounded-xl border-2 border-black/10 bg-white px-2 text-[0.875rem] font-black outline-none focus:border-primary" />
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={8}
+              className="h-9 w-28 rounded-xl border-2 border-black/10 bg-white px-2 text-[0.875rem] font-black outline-none focus:border-primary"
+            />
             <GameButton size="sm" disabled={!name.trim() || name === w.name} onClick={() => (w.setAvatar({}, name.trim()), toast('이름을 바꿨어요'))}>
               저장
             </GameButton>
@@ -221,11 +250,46 @@ export function SettingsPanel({ onClose, onCharacter }: { onClose: () => void; o
             <p className="text-[0.8125rem] font-black">🔊 듣기 모드 속도</p>
             <div className="mt-1.5 flex gap-1">
               {[0.8, 1, 1.2, 1.4].map((r) => (
-                <button key={r} onClick={() => app.updateSettings({ speechRate: r })} className={cx('h-8 flex-1 rounded-xl text-[0.75rem] font-black', app.settings.speechRate === r ? 'bg-ink text-white' : 'bg-black/5')}>
+                <button
+                  key={r}
+                  onClick={() => app.updateSettings({ speechRate: r })}
+                  className={cx('h-8 flex-1 rounded-xl text-[0.75rem] font-black', app.settings.speechRate === r ? 'bg-ink text-white' : 'bg-black/5')}
+                >
                   {r}×
                 </button>
               ))}
             </div>
+          </Card>
+          <Card>
+            <p className="text-[0.8125rem] font-black">🎵 소리</p>
+            <div className="mt-1.5 flex gap-1.5">
+              {(
+                [
+                  ['bgm', '🎼 배경음악'],
+                  ['sfx', '🔔 효과음'],
+                ] as const
+              ).map(([k, label]) => {
+                const on = app.settings[k] !== false
+                return (
+                  <button
+                    key={k}
+                    onClick={() => {
+                      app.updateSettings({ [k]: !on })
+                      setAudio({ [k]: !on })
+                      if (k === 'sfx' && !on) sfx('pop')
+                    }}
+                    aria-pressed={on}
+                    className={cx(
+                      'flex h-9 flex-1 items-center justify-center gap-1 rounded-xl text-[0.75rem] font-black transition',
+                      on ? 'bg-gradient-to-b from-[#9B87FF] to-violet text-white shadow' : 'bg-black/5 text-sub',
+                    )}
+                  >
+                    {label} {on ? 'ON' : 'OFF'}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="mt-1 text-[0.625rem] font-semibold text-mute">잔잔한 오르골 음악 · 낮엔 새소리, 밤엔 풀벌레 소리가 들려요.</p>
           </Card>
           <Card>
             <label className="flex items-center justify-between gap-2">

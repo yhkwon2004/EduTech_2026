@@ -12,6 +12,11 @@ import type { BuildingId, HitId } from './map'
 import { PanelRouter, type PanelState } from './panels/Router'
 import { CreateFlow } from './CreateFlow'
 import { Atmosphere } from './render/Atmosphere'
+import { FxLayer, fxConfetti } from './fx'
+import { installAudioUnlock, setAudio, sfx } from './audio'
+import { useApp } from '@/store/app'
+
+installAudioUnlock()
 
 function isNight() {
   const h = new Date().getHours()
@@ -78,6 +83,9 @@ export function GameScreen() {
   const created = useWorld((s) => s.created)
   const story = useStory()
   const settle = useWorld((s) => s.settleInterest)
+  const bgmOn = useApp((s) => s.settings.bgm !== false)
+  const sfxOn = useApp((s) => s.settings.sfx !== false)
+  useEffect(() => setAudio({ bgm: bgmOn, sfx: sfxOn }), [bgmOn, sfxOn])
 
   useEffect(() => {
     if (!created) return
@@ -86,7 +94,8 @@ export function GameScreen() {
   }, [settle, created])
 
   const onArrive = useCallback((hit: HitId) => {
-    if (!hit.startsWith('plot:') && !hit.startsWith('rival:')) useWorld.getState().visit(hit)
+    if (!hit.startsWith('plot:') && !hit.startsWith('rival:') && !hit.startsWith('npc:')) useWorld.getState().visit(hit)
+    sfx('open')
     setPanel({ hit })
   }, [])
 
@@ -106,6 +115,8 @@ export function GameScreen() {
     if (!q || !story.done) return
     useWorld.getState().claimStory(q.id, q.reward)
     toast(`퀘스트 완료! +${q.reward.cash.toLocaleString()}원 · +${q.reward.exp} EXP`)
+    sfx('chest')
+    fxConfetti()
     emote('hop', '🎁')
   }
 
@@ -133,6 +144,8 @@ export function GameScreen() {
     if (prevLevel.current !== null && lv > prevLevel.current) {
       toast(`🎉 레벨 ${lv} 달성! 체력이 가득 찼어요`, 'level')
       emote('cheer', '⭐')
+      sfx('levelup')
+      fxConfetti()
     }
     prevLevel.current = lv
   }, [exp])
@@ -146,7 +159,10 @@ export function GameScreen() {
         <>
           {!running && (
             <HUD
-              onMenu={(m) => setPanel({ hit: m })}
+              onMenu={(m) => {
+                sfx('open')
+                setPanel({ hit: m })
+              }}
               onGo={() => story.current && goTarget(story.current.target)}
               onClaimStory={claimStory}
               onZoom={(d) => worldRef.current?.zoom(d)}
@@ -159,6 +175,7 @@ export function GameScreen() {
       ) : (
         <CreateFlow />
       )}
+      <FxLayer />
       <Toasts />
     </>
   )

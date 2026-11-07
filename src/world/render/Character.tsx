@@ -76,10 +76,12 @@ export interface NodeProps extends CharProps {
   name?: string
   bubble?: string | null
   me?: boolean
+  /** 누르면 퀴즈 (data-hit 값) */
+  quiz?: string
 }
 
 /** 위치는 ref로 직접 움직여요 (리렌더 없이 60fps) */
-export const CharacterNode = forwardRef<SVGGElement, NodeProps>(function CharacterNode({ name, bubble, me, scale = 1, ...rest }, ref) {
+export const CharacterNode = forwardRef<SVGGElement, NodeProps>(function CharacterNode({ name, bubble, me, quiz, scale = 1, ...rest }, ref) {
   const bw = bubble ? Math.max(30, [...bubble].length * 10.5 + 18) : 0
   return (
     <g ref={ref} style={{ pointerEvents: 'none' }}>
@@ -93,6 +95,27 @@ export const CharacterNode = forwardRef<SVGGElement, NodeProps>(function Charact
           <text x={me ? 3 : 0} y={4} textAnchor="middle" fontSize={10.5} fontWeight={800} fill="#fff" fontFamily="Pretendard Variable, Pretendard, sans-serif">
             {name}
           </text>
+        </g>
+      )}
+      {quiz && (
+        <g data-hit={quiz} style={{ pointerEvents: 'auto', cursor: 'pointer' }}>
+          <ellipse cx={0} cy={-34 * scale} rx={18} ry={40 * scale} fill="transparent" />
+          <g transform={`translate(0,${-84 * scale})`}>
+            <g className="marker-bob">
+              <circle r={17} fill="#FFE27A" opacity={0.35} className="glow-pulse" />
+              <circle r={12.5} fill="url(#quiz-badge)" stroke="#fff" strokeWidth={2.5} />
+              <text y={5.2} textAnchor="middle" fontSize={15} fontWeight={900} fill="#7A4A00" fontFamily="Pretendard Variable, Pretendard, sans-serif">
+                ?
+              </text>
+              <path d="M-4 11.5 L0 17 L4 11.5 z" fill="#FFF" />
+            </g>
+          </g>
+          <defs>
+            <linearGradient id="quiz-badge" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#FFF09A" />
+              <stop offset="1" stopColor="#F2A21B" />
+            </linearGradient>
+          </defs>
         </g>
       )}
       {bubble && (

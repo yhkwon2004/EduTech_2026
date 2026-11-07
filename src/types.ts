@@ -85,6 +85,10 @@ export interface Question {
 
 export interface Settings {
   speechRate: number
+  /** 배경음악 */
+  bgm?: boolean
+  /** 효과음 */
+  sfx?: boolean
 }
 
 export interface LessonProgress {

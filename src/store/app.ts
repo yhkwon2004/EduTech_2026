@@ -18,6 +18,19 @@ interface AppState {
   review: ReviewItem[]
   questions: Question[]
   faqRead: string[]
+  /** 스테이지 별 (최고 기록) */
+  stars: Record<string, number>
+  /** 열어 본 챕터 보물상자 */
+  chests: string[]
+  /** 동네 사람 퀴즈 (날짜별 맞힌 수) */
+  npcQuiz: { date: string; count: number }
+  /** 배움 나무에 물 준 날 */
+  treeWater: string
+  /** 오늘 처음 물 주면 true */
+  waterTree: () => boolean
+  setStars: (lessonId: string, n: number) => void
+  openChest: (courseId: string) => void
+  npcQuizSolved: () => number
 
   updateSettings: (s: Partial<Settings>) => void
   setCard: (lessonId: string, card: number) => void
@@ -45,6 +58,10 @@ const initial = () => ({
   review: [] as ReviewItem[],
   questions: seedQuestions(),
   faqRead: [] as string[],
+  stars: {} as Record<string, number>,
+  chests: [] as string[],
+  npcQuiz: { date: '', count: 0 },
+  treeWater: '',
 })
 
 export const useApp = create<AppState>()(
@@ -53,6 +70,19 @@ export const useApp = create<AppState>()(
       ...initial(),
 
       updateSettings: (s) => set({ settings: { ...get().settings, ...s } }),
+      waterTree: () => {
+        if (get().treeWater === todayKey()) return false
+        set({ treeWater: todayKey() })
+        return true
+      },
+      setStars: (lessonId, n) => set({ stars: { ...get().stars, [lessonId]: Math.max(n, get().stars[lessonId] ?? 0) } }),
+      openChest: (courseId) => !get().chests.includes(courseId) && set({ chests: [...get().chests, courseId] }),
+      npcQuizSolved: () => {
+        const today = todayKey()
+        const cur = get().npcQuiz.date === today ? get().npcQuiz.count : 0
+        set({ npcQuiz: { date: today, count: cur + 1 } })
+        return cur + 1
+      },
 
       setCard: (lessonId, card) =>
         set({ progress: { ...get().progress, [lessonId]: { ...(get().progress[lessonId] ?? { done: false, card: 0 }), card } } }),
