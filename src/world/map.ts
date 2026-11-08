@@ -77,6 +77,41 @@ export const BUILDINGS: BuildingDef[] = [
 
 export const BUILDING_MAP = Object.fromEntries(BUILDINGS.map((b) => [b.id, b])) as Record<BuildingId, BuildingDef>
 
+/** 건물 짓기 — 처음엔 몇 채 없고, 배우면서 하나씩 지어요 */
+export interface BuildDef {
+  id: BuildingId
+  emoji: string
+  /** 짓는 데 드는 돈 */
+  cost: number
+  /** 짓는 시간(분) — 체험 모드면 10배 빠르게 */
+  minutes: number
+  /** 필요한 레벨 */
+  level: number
+  /** 먼저 끝내야 하는 레슨 */
+  lesson?: string
+  /** 짓고 나면 할 수 있는 일 */
+  unlocks: string
+  /** 왜 이 레슨인지 */
+  why: string
+}
+export const BUILDS: BuildDef[] = [
+  {
+    id: 'market',
+    emoji: '🛒',
+    cost: 5000,
+    minutes: 1,
+    level: 1,
+    lesson: 'l-cost-1',
+    unlocks: '씨앗·재료 사기, 작물 팔기 — 시세가 매일 바뀌어요',
+    why: '원가를 알아야 싼 날 사고 비싼 날 팔 수 있어요',
+  },
+  { id: 'workshop', emoji: '🍳', cost: 10000, minutes: 3, level: 2, lesson: 'l-cost-2', unlocks: '레시피대로 상품 만들기 (작업대)', why: '레시피 원가율을 알면 남는 상품을 만들어요' },
+  { id: 'support', emoji: '🏛️', cost: 20000, minutes: 5, level: 3, lesson: 'l-support-1', unlocks: '지원사업 신청 · 정책자금 · 영수증 정리', why: '지원금과 융자의 차이를 알고 신청해요' },
+]
+export const BUILD_MAP = Object.fromEntries(BUILDS.map((b) => [b.id, b])) as Partial<Record<BuildingId, BuildDef>>
+/** 처음부터 있는 건물 */
+export const INITIAL_BUILT: BuildingId[] = BUILDINGS.map((b) => b.id).filter((id) => !BUILD_MAP[id])
+
 /** 경쟁 가게 7곳의 자리 */
 /** 창업 전에 보이는 이웃 가게 이름 */
 export const RIVAL_PLACEHOLDER = [

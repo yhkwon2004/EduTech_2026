@@ -15,6 +15,7 @@ import { Atmosphere } from './render/Atmosphere'
 import { FxLayer, fxConfetti } from './fx'
 import { installAudioUnlock, setAudio, sfx } from './audio'
 import { useApp } from '@/store/app'
+import { BUILD_MAP } from './map'
 
 installAudioUnlock()
 
@@ -96,6 +97,11 @@ export function GameScreen() {
   const onArrive = useCallback((hit: HitId) => {
     if (!hit.startsWith('plot:') && !hit.startsWith('rival:') && !hit.startsWith('npc:')) useWorld.getState().visit(hit)
     sfx('open')
+    // 아직 안 지은 건물이면 건설 창
+    if (BUILD_MAP[hit as keyof typeof BUILD_MAP] && useWorld.getState().buildings[hit] !== 0) {
+      setPanel({ hit: 'build', sub: hit })
+      return
+    }
     setPanel({ hit })
   }, [])
 

@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactElement } from 'react'
-import { BUILDINGS, BUILDING_MAP, DECOS, PLOTS, RIVAL_LOTS, RIVAL_PLACEHOLDER, WORLD_BOUNDS, findPath, iso, screenToTile, walkable, type BuildingId, type HitId } from '../map'
+import { BUILDINGS, BUILDING_MAP, BUILD_MAP, DECOS, PLOTS, RIVAL_LOTS, RIVAL_PLACEHOLDER, WORLD_BOUNDS, findPath, iso, screenToTile, walkable, type BuildingId, type HitId } from '../map'
 import { useWorld, levelOf } from '../store'
 import { useGame, canPlayToday } from '@/game/store'
 import { useScreen } from '../screen'
@@ -13,6 +13,8 @@ import { useEmote, ACT_MS } from '../emote'
 import { energyNow } from '../store'
 import { WorldDefs } from './Defs'
 import { LearnTreeArt } from './Tree'
+import { ConstructionArt, LotArt } from './Construction'
+import { buildStatus } from '../build'
 import { useApp } from '@/store/app'
 import { npcQuizLeft, treeStage } from '../learn'
 import { hash, rng } from '@/lib/rng'
@@ -159,6 +161,7 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
   const look: Look = useMemo(() => toLook(world.avatar, role), [world.avatar, role])
   const level = levelOf(world.exp).level
   const doneLessons = useApp((s) => Object.values(s.progress).filter((p) => p.done).length)
+  const progress = useApp((s) => s.progress)
   const hour = new Date(now).getHours()
   const night = hour >= 19 || hour < 6
 
@@ -173,8 +176,8 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
   const dustEl = useRef<SVGGElement>(null)
   const routeEl = useRef<SVGGElement>(null)
   const [route, setRoute] = useState<{ pts: { x: number; y: number }[]; k: number } | null>(null)
-  const camEl = useRef<SVGGElement>(null)
-  const lightsEl = useRef<SVGGElement>(null)
+  const camEl = useRef<HTMLDivElement>(null)
+  const lightsEl = useRef<HTMLDivElement>(null)
   const cam = useRef({ x: footOf(world.pos).x, y: footOf(world.pos).y - 40, zoom: 1, follow: true })
   const [zoomLevel, setZoomLevel] = useState(1)
   const pushPlayer = useCallback(() => {
@@ -250,9 +253,10 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     const halfH = screen.height / 2 / z
     c.x = Math.min(WORLD_BOUNDS.right - halfW * 0.4, Math.max(WORLD_BOUNDS.left + halfW * 0.4, c.x))
     c.y = Math.min(WORLD_BOUNDS.bottom - halfH * 0.3, Math.max(WORLD_BOUNDS.top + halfH * 0.3, c.y))
-    const tf = `translate(${screen.width / 2 - c.x * z},${screen.height / 2 - c.y * z}) scale(${z})`
-    camEl.current?.setAttribute('transform', tf)
-    lightsEl.current?.setAttribute('transform', tf)
+    // 카메라는 CSS transform (GPU 합성) — SVG 안의 transform과 달리 매 프레임 다시 그리지 않아요
+    const tf = `translate(${(screen.width / 2 - c.x * z + WORLD_BOUNDS.left * z).toFixed(2)}px,${(screen.height / 2 - c.y * z + WORLD_BOUNDS.top * z).toFixed(2)}px) scale(${z.toFixed(4)})`
+    if (camEl.current) camEl.current.style.transform = tf
+    if (lightsEl.current) lightsEl.current.style.transform = tf
   }, [screen.width, screen.height, baseZoom])
 
   // ── 매 프레임: 이동 + 몸 돌리기 + 동작 + 카메라
@@ -508,6 +512,26 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     return doorOf(hit)
   }, [])
 
+  /** 화면의 한 점(게임 좌표)을 고정한 채 확대/축소 */
+  const zoomAt = useCallback(
+    (next: number, at?: { x: number; y: number }) => {
+      const c = cam.current
+      const z0 = baseZoom * c.zoom
+      const nz = Math.max(0.5, Math.min(2.6, next))
+      const z1 = baseZoom * nz
+      if (at) {
+        // 그 점 아래의 월드 좌표가 그대로 있도록 카메라를 옮겨요
+        const wx = (at.x - screen.width / 2) / z0 + c.x
+        const wy = (at.y - screen.height / 2) / z0 + c.y
+        c.x = wx - (at.x - screen.width / 2) / z1
+        c.y = wy - (at.y - screen.height / 2) / z1
+        c.follow = false
+      }
+      c.zoom = nz
+    },
+    [baseZoom, screen.width, screen.height],
+  )
+
   const walkToTile = useCallback((tile: { x: number; y: number }, hit: HitId | null) => {
     const p = player.current
     const from = { x: Math.round(p.x), y: Math.round(p.y) }
@@ -537,7 +561,7 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
         cam.current.follow = true
       },
       zoom: (d) => {
-        cam.current.zoom = Math.max(0.7, Math.min(1.8, cam.current.zoom + d))
+        zoomAt(cam.current.zoom + d)
         setZoomLevel(cam.current.zoom)
       },
       rush: (n) => {
@@ -551,20 +575,37 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
         })
       },
     }),
-    [walkToTile, targetOf],
+    [walkToTile, targetOf, zoomAt],
   )
 
   // ── 입력: 드래그 = 카메라 이동, 탭 = 걷기/상호작용
   const drag = useRef<{ id: number; sx: number; sy: number; lx: number; ly: number; moved: boolean } | null>(null)
+  const pointers = useRef(new Map<number, { x: number; y: number }>())
+  const pinch = useRef<{ dist: number; zoom: number } | null>(null)
   const [ripple, setRipple] = useState<{ x: number; y: number; k: number } | null>(null)
   const onPointerDown = (e: React.PointerEvent) => {
     const l = screen.toLocal(e.clientX, e.clientY)
+    pointers.current.set(e.pointerId, l)
+    if (pointers.current.size === 2) {
+      // 두 손가락: 핀치 줌 시작
+      const [a, b] = [...pointers.current.values()]
+      pinch.current = { dist: Math.max(10, Math.hypot(a.x - b.x, a.y - b.y)), zoom: cam.current.zoom }
+      if (drag.current) drag.current.moved = true
+      return
+    }
     drag.current = { id: e.pointerId, sx: l.x, sy: l.y, lx: l.x, ly: l.y, moved: false }
   }
   const onPointerMove = (e: React.PointerEvent) => {
+    const l = screen.toLocal(e.clientX, e.clientY)
+    if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, l)
+    if (pinch.current && pointers.current.size >= 2) {
+      const [a, b] = [...pointers.current.values()]
+      const dist = Math.hypot(a.x - b.x, a.y - b.y)
+      if (dist > 10) zoomAt(pinch.current.zoom * (dist / pinch.current.dist), { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 })
+      return
+    }
     const d = drag.current
     if (!d || d.id !== e.pointerId) return
-    const l = screen.toLocal(e.clientX, e.clientY)
     if (!d.moved && Math.hypot(l.x - d.sx, l.y - d.sy) > 8) d.moved = true
     if (d.moved) {
       const z = baseZoom * cam.current.zoom
@@ -575,7 +616,21 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     d.lx = l.x
     d.ly = l.y
   }
+  /** 손가락을 뗐을 때 — 핀치 중이었으면 true */
+  const endPointer = (e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId)
+    if (pinch.current) {
+      if (pointers.current.size < 2) {
+        pinch.current = null
+        setZoomLevel(cam.current.zoom)
+      }
+      drag.current = null
+      return true
+    }
+    return false
+  }
   const onPointerUp = (e: React.PointerEvent) => {
+    if (endPointer(e)) return
     const d = drag.current
     drag.current = null
     if (!d || d.moved || paused) return
@@ -603,6 +658,20 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     setRipple({ x: wx, y: wy, k: Date.now() })
     walkToTile(t, null)
   }
+  // 마우스 휠 · 트랙패드 핀치
+  const rootEl = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = rootEl.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const l = screen.toLocal(e.clientX, e.clientY)
+      zoomAt(cam.current.zoom * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0018)), l)
+      setZoomLevel(cam.current.zoom)
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [screen, zoomAt])
 
   // ── 그릴 것들 (깊이 순 정렬)
   const crafting = world.crafting
@@ -611,9 +680,68 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
   const today = todayKey()
   const workReady = !!world.job && (world.job.lastWork !== today || world.fast)
   const items: { depth: number; el: ReactElement }[] = []
+  // ── 머리 위 알림 (퀘스트·완성·영업 가능)
+  const markers: ReactElement[] = []
+  const markAt = (key: string, x: number, y: number, z: number, label: string, tone: string) => {
+    const p = iso(x, y, z)
+    markers.push(
+      <g key={key} transform={`translate(${p.x},${p.y})`} style={{ pointerEvents: 'none' }}>
+        <g className="marker-bob">
+          <rect x={-label.length * 5.6 - 10} y={-15} width={label.length * 11.2 + 20} height={24} rx={12} fill={tone} stroke="#fff" strokeWidth={2} />
+          <text y={2.5} textAnchor="middle" fontSize={11.5} fontWeight={900} fill="#fff" fontFamily="Pretendard Variable, sans-serif">
+            {label}
+          </text>
+          <path d="M-5 9 L0 15 L5 9 z" fill={tone} />
+        </g>
+      </g>,
+    )
+  }
 
   for (const b of BUILDINGS) {
     let art: ReactElement
+    const bs = BUILD_MAP[b.id] ? buildStatus(b.id, world, progress, now) : null
+    if (bs && bs.state !== 'done') {
+      const def = bs.def
+      if (bs.state === 'building' || bs.state === 'finished') {
+        const total = (def.minutes * 60_000) / (world.fast ? 10 : 1)
+        art = <ConstructionArt b={b} progress={Math.max(0, Math.min(1, 1 - ((bs.readyAt ?? now) - now) / total))} done={bs.state === 'finished'} />
+        if (bs.state === 'finished') markAt(`m-done-${b.id}`, b.x + b.w / 2, b.y + b.d / 2, 90, '완공!', '#F2A93B')
+        else {
+          const left = Math.max(0, (bs.readyAt ?? now) - now)
+          const m = Math.floor(left / 60000)
+          const sec = Math.ceil((left % 60000) / 1000)
+          markAt(`m-build-${b.id}`, b.x + b.w / 2, b.y + b.d / 2, 92, `⏳ ${m ? `${m}분 ` : ''}${sec}초`, '#3B3E73')
+        }
+      } else {
+        art = (
+          <LotArt
+            b={b}
+            emoji={def.emoji}
+            label={`${b.name} 자리`}
+            hint={
+              bs.state === 'ready'
+                ? '눌러서 지어요!'
+                : bs.missing[0]?.kind === 'lesson'
+                  ? '레슨을 들으면 지을 수 있어요'
+                  : bs.missing[0]?.kind === 'level'
+                    ? `레벨 ${def.level}부터`
+                    : '돈을 모으면 지을 수 있어요'
+            }
+            canBuild={bs.state === 'ready'}
+          />
+        )
+        if (bs.state === 'ready') markAt(`m-ready-${b.id}`, b.x + b.w / 2, b.y + b.d / 2, 74, '🏗️ 지을 수 있어요', '#2FA594')
+      }
+      items.push({
+        depth: b.x + b.w - 1 + b.y + b.d - 1 + 0.4,
+        el: (
+          <g key={b.id} data-hit={b.id} className="hit-building">
+            {art}
+          </g>
+        ),
+      })
+      continue
+    }
     switch (b.id) {
       case 'shop':
         art = game.started ? (
@@ -746,22 +874,6 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     })
   items.sort((a, b) => a.depth - b.depth)
 
-  // ── 머리 위 알림 (퀘스트·완성·영업 가능)
-  const markers: ReactElement[] = []
-  const markAt = (key: string, x: number, y: number, z: number, label: string, tone: string) => {
-    const p = iso(x, y, z)
-    markers.push(
-      <g key={key} transform={`translate(${p.x},${p.y})`} style={{ pointerEvents: 'none' }}>
-        <g className="marker-bob">
-          <rect x={-label.length * 5.6 - 10} y={-15} width={label.length * 11.2 + 20} height={24} rx={12} fill={tone} stroke="#fff" strokeWidth={2} />
-          <text y={2.5} textAnchor="middle" fontSize={11.5} fontWeight={900} fill="#fff" fontFamily="Pretendard Variable, sans-serif">
-            {label}
-          </text>
-          <path d="M-5 9 L0 15 L5 9 z" fill={tone} />
-        </g>
-      </g>,
-    )
-  }
   if (craftReady) markAt('m-craft', 19, 7, 102, '완성!', '#22A090')
   if (shopReady) markAt('m-shop', 15.5, 6.5, 118, '영업 시작', '#F25C54')
   if (workReady) markAt('m-work', 9.5, 13.5, 168, '출근', '#3156C4')
@@ -782,18 +894,23 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     )
   }
 
+  const W = WORLD_BOUNDS
   return (
     <div
-      className="absolute inset-0 touch-none select-none"
+      ref={rootEl}
+      className="absolute inset-0 touch-none select-none overflow-hidden"
       style={{ cursor: drag.current?.moved ? 'grabbing' : 'pointer' }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={() => (drag.current = null)}
+      onPointerCancel={(e) => {
+        endPointer(e)
+        drag.current = null
+      }}
       data-zoom={zoomLevel}
     >
-      <svg width={screen.width} height={screen.height} className="block">
-        <WorldDefs />
+      {/* 바다 (화면 고정) */}
+      <svg width={screen.width} height={screen.height} className="absolute inset-0 block" aria-hidden>
         <defs>
           <linearGradient id="sea" x1="0" y1="0" x2="0.35" y2="1">
             <stop offset="0" stopColor="#8FDBF7" />
@@ -808,7 +925,11 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
         </defs>
         <rect width={screen.width} height={screen.height} fill="url(#sea)" />
         <rect width={screen.width} height={screen.height} fill="url(#sea-sun)" />
-        <g ref={camEl}>
+      </svg>
+      {/* 마을 — 카메라는 이 div의 CSS transform */}
+      <div ref={camEl} className="absolute left-0 top-0" style={{ width: W.width, height: W.height, transformOrigin: '0 0', willChange: 'transform' }}>
+        <svg width={W.width} height={W.height} viewBox={`${W.left} ${W.top} ${W.width} ${W.height}`} className="block" overflow="visible">
+          <WorldDefs />
           <GroundLayer />
           {route && route.pts.length > 1 && (
             <g key={route.k} ref={routeEl} style={{ pointerEvents: 'none' }}>
@@ -838,23 +959,30 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
             </g>
           )}
           {markers}
-        </g>
-      </svg>
-      {night && (
-        <svg width={screen.width} height={screen.height} className="pointer-events-none absolute inset-0 z-[11] block" style={{ mixBlendMode: 'screen' }} aria-hidden>
-          <defs>
-            <radialGradient id="nl-warm">
-              <stop offset="0" stopColor="#FFC965" stopOpacity="0.55" />
-              <stop offset="0.45" stopColor="#FF9E3D" stopOpacity="0.2" />
-              <stop offset="1" stopColor="#FF9E3D" stopOpacity="0" />
-            </radialGradient>
-            <radialGradient id="nl-win">
-              <stop offset="0" stopColor="#FFE3A0" stopOpacity="0.42" />
-              <stop offset="1" stopColor="#FFB85C" stopOpacity="0" />
-            </radialGradient>
-          </defs>
-          <g ref={lightsEl}>{NIGHT_LIGHTS}</g>
         </svg>
+      </div>
+      {night && (
+        <div
+          ref={lightsEl}
+          className="pointer-events-none absolute left-0 top-0 z-[11]"
+          style={{ width: W.width, height: W.height, transformOrigin: '0 0', willChange: 'transform', mixBlendMode: 'screen' }}
+          aria-hidden
+        >
+          <svg width={W.width} height={W.height} viewBox={`${W.left} ${W.top} ${W.width} ${W.height}`} className="block" overflow="visible">
+            <defs>
+              <radialGradient id="nl-warm">
+                <stop offset="0" stopColor="#FFC965" stopOpacity="0.55" />
+                <stop offset="0.45" stopColor="#FF9E3D" stopOpacity="0.2" />
+                <stop offset="1" stopColor="#FF9E3D" stopOpacity="0" />
+              </radialGradient>
+              <radialGradient id="nl-win">
+                <stop offset="0" stopColor="#FFE3A0" stopOpacity="0.42" />
+                <stop offset="1" stopColor="#FFB85C" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            {NIGHT_LIGHTS}
+          </svg>
+        </div>
       )}
     </div>
   )

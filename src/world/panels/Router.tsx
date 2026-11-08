@@ -15,8 +15,9 @@ import { WorkshopPanel } from './WorkshopPanel'
 import { CharacterPanel } from './CharacterPanel'
 import { TreePanel } from './TreePanel'
 import { NpcQuizPanel } from './NpcQuizPanel'
+import { BuildPanel } from './BuildPanel'
 
-export type MenuId = 'bag' | 'quest' | 'rank' | 'settings' | 'character'
+export type MenuId = 'bag' | 'quest' | 'rank' | 'settings' | 'character' | 'build'
 export interface PanelState {
   hit: HitId | MenuId | 'result'
   /** 패널 안에서 바로 열 화면 (예: 레슨 id, 게시판 탭) */
@@ -76,6 +77,8 @@ export function PanelRouter({
           }}
         />
       )
+    case 'build':
+      return <BuildPanel id={panel.sub as BuildingId} onClose={onClose} openLesson={openLesson} onBuilt={() => walk(panel.sub as BuildingId)} />
     case 'tree':
       return <TreePanel onClose={onClose} goAcademy={() => walk('academy')} openLesson={openLesson} />
     case 'bag':

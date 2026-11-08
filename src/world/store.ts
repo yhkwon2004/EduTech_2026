@@ -4,7 +4,7 @@ import type { Region } from '@/game/types'
 import { todayKey } from '@/lib/date'
 import { CROP_MAP, type Recipe } from './items'
 import { canPromote, RANKS, type JobId } from './jobs'
-import { PLOT_MAP } from './map'
+import { BUILDINGS, INITIAL_BUILT, PLOT_MAP } from './map'
 import type { Path } from './quests'
 import { LOAN } from './support'
 import { DEFAULT_AVATAR, type Avatar } from './avatar'
@@ -94,6 +94,11 @@ export interface WorldState {
   receiptsDay?: string
   fast: boolean
   invested: number
+  /** 지은 건물: 완공 시각 (지금보다 뒤면 공사 중) */
+  buildings: Record<string, number>
+  startBuild: (id: string, cost: number, minutes: number, now?: number) => boolean
+  /** 완공 (공사가 끝났을 때) — 처음 완공이면 true */
+  finishBuild: (id: string, now?: number) => boolean
 
   create: (p: { name: string; avatar: Avatar; region: Region; path: Path }) => void
   setAvatar: (a: Partial<Avatar>, name?: string) => void
@@ -169,6 +174,7 @@ const initial = () => ({
   receiptsDay: undefined as string | undefined,
   fast: false,
   invested: 0,
+  buildings: Object.fromEntries(INITIAL_BUILT.map((id) => [id, 0])) as Record<string, number>,
 })
 
 /** 오늘 카운터 (날짜가 바뀌면 새로) */
@@ -407,15 +413,31 @@ export const useWorld = create<WorldState>()(
           get().addExp(15)
         },
         setFast: (v) => set({ fast: v }),
+        startBuild: (id, cost, minutes, now = Date.now()) => {
+          const s = get()
+          if (s.buildings[id] !== undefined || s.cash < cost) return false
+          set({ cash: s.cash - cost, buildings: { ...s.buildings, [id]: now + (minutes * 60_000) / (s.fast ? 10 : 1) } })
+          return true
+        },
+        finishBuild: (id, now = Date.now()) => {
+          const s = get()
+          const at = s.buildings[id]
+          if (at === undefined || at > now || s.counters[`built:${id}`]) return false
+          bumpBoth(`built:${id}`)
+          bumpBoth('built')
+          set({ buildings: { ...get().buildings, [id]: 0 } })
+          return true
+        },
         noteInvest: () => set({ invested: get().invested + 1 }),
         reset: () => set({ ...initial(), energyAt: Date.now() }),
       }
     },
     {
       name: 'golmok-world-v1',
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => localStorage),
       // v2: 꾸미기 항목이 늘었어요. 예전 '모자' 머리는 짧은 머리 + 야구모자로
+      // v3: 건물 짓기 — 이미 하던 마을은 다 지어진 걸로
       migrate: (persisted, version) => {
         const p = { ...((persisted ?? {}) as Record<string, unknown>) }
         if (version < 2 && p.avatar) {
@@ -423,6 +445,7 @@ export const useWorld = create<WorldState>()(
           if (a.hair === 3) Object.assign(a, { hair: 0, hat: 1 })
           p.avatar = { ...DEFAULT_AVATAR, ...a }
         }
+        if (version < 3 && !p.buildings) p.buildings = Object.fromEntries(BUILDINGS.map((b) => [b.id, 0]))
         return p as unknown as WorldState
       },
     },

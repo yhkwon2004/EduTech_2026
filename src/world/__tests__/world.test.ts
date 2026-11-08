@@ -97,7 +97,8 @@ describe('quests', () => {
   it('has an owner chain and an employee chain that continues into owning a shop', () => {
     expect(storyFor('owner', false)[0].id).toBe('board')
     // 창업부터 해야 공방·영업이 열려요
-    expect(storyFor('owner', false)[1].id).toBe('o-setup')
+    expect(storyFor('owner', false)[1].id).toBe('o-learn')
+    expect(storyFor('owner', false).map((q) => q.id)).toContain('o-build-market')
     const emp = storyFor('employee', false).map((q) => q.id)
     expect(emp).toContain('e-startup')
     expect(storyFor('employee', true).map((q) => q.id)).toContain('o-open')

@@ -26,6 +26,8 @@ export interface CharProps {
   speed?: number
   /** 'head'면 머리만 (아이콘·표정 시트) */
   part?: 'all' | 'head'
+  /** 동작을 계속 반복 (공사 중 망치질 등) */
+  loop?: boolean
 }
 
 function viewOf(yaw: number): { view: View; flip: boolean } {
@@ -34,7 +36,7 @@ function viewOf(yaw: number): { view: View; flip: boolean } {
   return { view: Math.abs(y) <= 90 ? 'F' : 'B', flip: y < 0 }
 }
 
-export const CharacterArt = memo(function CharacterArt({ look, yaw = 20, walking = false, act = null, expr = null, scale = 1, pose, seed = 0, speed = 0.46, part = 'all' }: CharProps) {
+export const CharacterArt = memo(function CharacterArt({ look, yaw = 20, walking = false, act = null, expr = null, scale = 1, pose, seed = 0, speed = 0.46, part = 'all', loop = false }: CharProps) {
   const { view, flip } = viewOf(yaw)
   const face: Face = (expr === 'talk' ? 'normal' : expr) ?? (act === 'cheer' || act === 'wave' || pose === 'cheer' || pose === 'wave' ? 'happy' : 'normal')
   const kind: StripKind | null = pose ? null : walking ? 'walk' : act && act !== 'look' ? act : expr === 'talk' ? 'talk' : 'idle'
@@ -42,9 +44,9 @@ export const CharacterArt = memo(function CharacterArt({ look, yaw = 20, walking
   const strip = useMemo(() => {
     if (!kind) return { ...stripImage(look, view, [poseFrame(pose!, face)]), frameMs: 0, iter: 1 as number | 'infinite' }
     const def = stripDef(kind, face, speed)
-    return { ...stripImage(look, view, def.frames), frameMs: def.frameMs, iter: def.iter }
+    return { ...stripImage(look, view, def.frames), frameMs: def.frameMs, iter: loop ? ('infinite' as const) : def.iter }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lookKey, view, kind, face, pose, speed])
+  }, [lookKey, view, kind, face, pose, speed, loop])
 
   const animated = strip.n > 1
   const dur = (strip.frameMs * strip.n) / 1000

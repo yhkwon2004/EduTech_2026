@@ -80,8 +80,9 @@ function Sea() {
     ])
   return (
     <g>
-      <polygon points={ring(2.2)} fill="#B8ECFA" opacity={0.35} filter="url(#f-shadow)" />
-      <polygon points={ring(0.9)} fill="#C9F3FC" opacity={0.55} filter="url(#f-shadow)" />
+      <polygon points={ring(2.6)} fill="#B8ECFA" opacity={0.18} />
+      <polygon points={ring(1.8)} fill="#B8ECFA" opacity={0.25} />
+      <polygon points={ring(0.9)} fill="#C9F3FC" opacity={0.5} />
       {waves}
     </g>
   )
@@ -346,7 +347,7 @@ function Shadows() {
     if (s) out.push(<ellipse key={`${d.kind}${d.x},${d.y}`} cx={c.x + (d.kind === 'tree' || d.kind === 'pine' ? 8 : 3)} cy={c.y + 1} rx={s[0]} ry={s[1]} />)
   }
   return (
-    <g fill="#1E3A10" opacity={0.26} filter="url(#f-shadow)">
+    <g fill="#1E3A10" opacity={0.22}>
       {out}
     </g>
   )

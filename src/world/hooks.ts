@@ -28,6 +28,7 @@ export function useQuestCtx(): QuestCtx {
       bestRank: ranks.length ? Math.min(...ranks) : 0,
       invested: w.invested,
       tier: g.tier,
+      built: Object.fromEntries(Object.entries(w.buildings).filter(([, at]) => at === 0).map(([id]) => [id, true])),
       champion: g.hall.some((h) => h.tier === 2 && h.rank === 1),
       level: levelOf(w.exp).level,
     }
