@@ -85,7 +85,12 @@ export const TreeArt = memo(function TreeArt({ stage, night = false, sign = true
       {/* 줄기 + 잎 */}
       {stage >= 2 && (
         <g>
-          <path d={`M-${3 + stage} -2 Q-${2 + stage / 2} -${trunkH * 0.5} -2 -${trunkH} L2 -${trunkH} Q${2 + stage / 2} -${trunkH * 0.5} ${3 + stage} -2 Z`} fill="url(#lt-trunk)" stroke="#3E2414" strokeWidth={1} />
+          <path
+            d={`M-${3 + stage} -2 Q-${2 + stage / 2} -${trunkH * 0.5} -2 -${trunkH} L2 -${trunkH} Q${2 + stage / 2} -${trunkH * 0.5} ${3 + stage} -2 Z`}
+            fill="url(#lt-trunk)"
+            stroke="#3E2414"
+            strokeWidth={1}
+          />
           {stage >= 3 && (
             <>
               <path d={`M-1 -${trunkH * 0.7} Q-${canopy * 0.4} -${trunkH * 0.9} -${canopy * 0.55} -${trunkH + 4}`} stroke="#6A3F22" strokeWidth={3} fill="none" strokeLinecap="round" />
@@ -129,7 +134,9 @@ export const TreeArt = memo(function TreeArt({ stage, night = false, sign = true
           {stage === 5 &&
             [0, 1, 2, 3].map((k) => {
               const p = ring(4, canopy * 1.3, k * 2 + 1)
-              return <path key={`t${k}`} d={`M${p.x} ${p.y - 3} l1 2.2 l2.2 1 l-2.2 1 l-1 2.2 l-1 -2.2 l-2.2 -1 l2.2 -1z`} fill="#FFF7C2" className="twinkle" style={{ animationDelay: `${k * 0.6}s` }} />
+              return (
+                <path key={`t${k}`} d={`M${p.x} ${p.y - 3} l1 2.2 l2.2 1 l-2.2 1 l-1 2.2 l-1 -2.2 l-2.2 -1 l2.2 -1z`} fill="#FFF7C2" className="twinkle" style={{ animationDelay: `${k * 0.6}s` }} />
+              )
             })}
         </g>
       )}
@@ -137,7 +144,15 @@ export const TreeArt = memo(function TreeArt({ stage, night = false, sign = true
       {night &&
         stage >= 2 &&
         [0, 1, 2, 3, 4].map((k) => (
-          <circle key={`ff${k}`} cx={-24 + k * 12} cy={cy + ((k * 13) % 26) - 4} r={1.6} fill="#F6FF9C" className="firefly" style={{ animationDelay: `${k * 0.7}s`, filter: 'drop-shadow(0 0 3px #EFFF7A)' }} />
+          <circle
+            key={`ff${k}`}
+            cx={-24 + k * 12}
+            cy={cy + ((k * 13) % 26) - 4}
+            r={1.6}
+            fill="#F6FF9C"
+            className="firefly"
+            style={{ animationDelay: `${k * 0.7}s`, filter: 'drop-shadow(0 0 3px #EFFF7A)' }}
+          />
         ))}
       {/* 팻말 */}
       {sign && (

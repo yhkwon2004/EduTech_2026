@@ -858,6 +858,83 @@
     }
   }
 
+  .bfly {
+    animation: bfly ease-in-out infinite;
+  }
+  @keyframes bfly {
+    0%,
+    100% {
+      transform: translate(0, -14px);
+    }
+    20% {
+      transform: translate(16px, -26px);
+    }
+    40% {
+      transform: translate(26px, -12px);
+    }
+    55% {
+      transform: translate(6px, -6px);
+    }
+    75% {
+      transform: translate(-18px, -22px);
+    }
+    90% {
+      transform: translate(-10px, -10px);
+    }
+  }
+  .bird-fly {
+    animation: bird-fly linear infinite;
+  }
+  @keyframes bird-fly {
+    0% {
+      transform: translate(-15vw, 0) scale(var(--s, 1));
+    }
+    50% {
+      transform: translate(50vw, -3vh) scale(var(--s, 1));
+    }
+    100% {
+      transform: translate(115vw, 2vh) scale(var(--s, 1));
+    }
+  }
+  .screen-firefly {
+    animation: screen-firefly ease-in-out infinite;
+  }
+  @keyframes screen-firefly {
+    0%,
+    100% {
+      transform: translate(0, 0);
+      opacity: 0;
+    }
+    20% {
+      opacity: 0.95;
+    }
+    50% {
+      transform: translate(26px, -34px);
+      opacity: 0.35;
+    }
+    70% {
+      opacity: 1;
+    }
+    85% {
+      transform: translate(-14px, -18px);
+    }
+  }
+  .dest-pulse {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: dest-pulse 1.2s ease-out infinite;
+  }
+  @keyframes dest-pulse {
+    from {
+      transform: scale(0.5);
+      opacity: 1;
+    }
+    to {
+      transform: scale(1.5);
+      opacity: 0;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

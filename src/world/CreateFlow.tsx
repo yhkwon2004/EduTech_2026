@@ -3,7 +3,9 @@ import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { SIDO, LEAGUE_NAME } from '@/game/data'
 import { useWorld, type Avatar } from './store'
 import { CharacterEditor } from './panels/CharacterPanel'
-import { DEFAULT_AVATAR } from './avatar'
+import { DEFAULT_AVATAR, VILLAGERS } from './avatar'
+import { PixelBuddy } from './panels/LearnGame'
+import { sfx } from './audio'
 import { cx, GameButton, toast } from './ui/kit'
 import type { Path } from './quests'
 
@@ -20,19 +22,37 @@ export function CreateFlow() {
 
   if (step < 0)
     return (
-      <div className="absolute inset-0 z-50 grid place-items-center bg-gradient-to-b from-[#0E2A5C]/30 via-transparent to-[#0E2A5C]/55">
-        <div className="animate-pop text-center">
-          <div className="relative mx-auto w-fit">
-            <p className="text-[0.875rem] font-black tracking-[0.3em] text-white drop-shadow-[0_2px_0_rgba(0,0,0,0.4)]">우리 동네 사업 성장기</p>
+      <div className="absolute inset-0 z-50 grid place-items-center overflow-hidden bg-gradient-to-b from-[#0E2A5C]/30 via-transparent to-[#0E2A5C]/55">
+        {/* 마을 사람들 행진 */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[5.5rem]" aria-hidden>
+          <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#0E2A5C]/40 to-transparent" />
+          {VILLAGERS.map((v, i) => (
+            <div key={v.id} className="march absolute bottom-1 left-0" style={{ animationDuration: `${24 + (i % 3) * 3}s`, animationDelay: `${-i * 3.6}s` }}>
+              <PixelBuddy look={v.look} walking yaw={70} size={46 * v.scale + 8} />
+            </div>
+          ))}
+        </div>
+        <div className="relative animate-pop text-center">
+          <div className="float-soft relative mx-auto w-fit">
+            <p className="text-[0.875rem] font-black tracking-[0.3em] text-white drop-shadow-[0_2px_0_rgba(0,0,0,0.4)]">배우며 키우는 힐링 장사 마을</p>
             <h1 className="title-logo mt-1 text-[3.25rem] font-black leading-none sm:text-[4rem]">골목 장사왕</h1>
             <span className="absolute -right-8 -top-4 rotate-12 text-[2.5rem]">👑</span>
+            <span className="twinkle absolute -left-6 top-6 text-[1.25rem]">✨</span>
           </div>
           <p className="mx-auto mt-3 max-w-[30rem] rounded-2xl bg-white/85 px-4 py-2 text-[0.875rem] font-bold text-ink shadow-lg backdrop-blur">
             🌾 텃밭을 일구고 · 🍳 상품을 만들고 · 🏪 가게를 열어 · 🏆 동네 최고 사장님에 도전!
             <br />
-            <span className="text-[0.75rem] text-sub">일하는 틈틈이 3분 레슨으로 진짜 장사 노하우까지 배워요</span>
+            <span className="text-[0.75rem] text-sub">📚 3분 스테이지를 깨면 별·보물상자·배움 나무가 자라요 · 🎵 소리를 켜고 즐겨 보세요</span>
           </p>
-          <GameButton size="lg" tone="sun" className="mt-4 px-10 text-[1.125rem]" onClick={() => setStep(0)}>
+          <GameButton
+            size="lg"
+            tone="sun"
+            className="shine-sweep mt-4 px-10 text-[1.125rem]"
+            onClick={() => {
+              sfx('open')
+              setStep(0)
+            }}
+          >
             ▶ 시작하기
           </GameButton>
         </div>
@@ -54,7 +74,10 @@ export function CreateFlow() {
           <h2 className="text-[1.0625rem] font-black text-white drop-shadow">새 이야기 시작</h2>
           <div className="ml-auto flex items-center gap-1">
             {STEPS.map((s, i) => (
-              <span key={s} className={cx('rounded-full px-2.5 py-1 text-[0.6875rem] font-black', i === step ? 'bg-white text-ink' : i < step ? 'bg-white/40 text-white' : 'bg-black/15 text-white/80')}>
+              <span
+                key={s}
+                className={cx('rounded-full px-2.5 py-1 text-[0.6875rem] font-black', i === step ? 'bg-white text-ink' : i < step ? 'bg-white/40 text-white' : 'bg-black/15 text-white/80')}
+              >
                 {i + 1}. {s}
               </span>
             ))}
@@ -70,7 +93,11 @@ export function CreateFlow() {
                 <p className="mb-1 text-[0.75rem] font-black text-sub">시·도</p>
                 <div className="flex flex-wrap gap-1.5">
                   {SIDO.map((s) => (
-                    <button key={s} onClick={() => setRegion({ ...region, sido: s })} className={cx('h-9 min-w-12 rounded-xl px-2.5 text-[0.8125rem] font-black', region.sido === s ? 'bg-ink text-white' : 'bg-black/5')}>
+                    <button
+                      key={s}
+                      onClick={() => setRegion({ ...region, sido: s })}
+                      className={cx('h-9 min-w-12 rounded-xl px-2.5 text-[0.8125rem] font-black', region.sido === s ? 'bg-ink text-white' : 'bg-black/5')}
+                    >
                       {s}
                     </button>
                   ))}
@@ -78,11 +105,21 @@ export function CreateFlow() {
                 <div className="mt-2.5 grid grid-cols-2 gap-2">
                   <label className="block">
                     <span className="text-[0.75rem] font-black text-sub">시·군·구</span>
-                    <input value={region.gu} onChange={(e) => setRegion({ ...region, gu: e.target.value })} maxLength={8} className="mt-1 h-10 w-full rounded-xl border-2 border-black/10 bg-white px-3 font-black outline-none focus:border-primary" />
+                    <input
+                      value={region.gu}
+                      onChange={(e) => setRegion({ ...region, gu: e.target.value })}
+                      maxLength={8}
+                      className="mt-1 h-10 w-full rounded-xl border-2 border-black/10 bg-white px-3 font-black outline-none focus:border-primary"
+                    />
                   </label>
                   <label className="block">
                     <span className="text-[0.75rem] font-black text-sub">동·읍·면</span>
-                    <input value={region.dong} onChange={(e) => setRegion({ ...region, dong: e.target.value })} maxLength={8} className="mt-1 h-10 w-full rounded-xl border-2 border-black/10 bg-white px-3 font-black outline-none focus:border-primary" />
+                    <input
+                      value={region.dong}
+                      onChange={(e) => setRegion({ ...region, dong: e.target.value })}
+                      maxLength={8}
+                      className="mt-1 h-10 w-full rounded-xl border-2 border-black/10 bg-white px-3 font-black outline-none focus:border-primary"
+                    />
                   </label>
                 </div>
               </div>
@@ -124,7 +161,11 @@ export function CreateFlow() {
                 <button
                   key={o.id}
                   onClick={() => setPath(o.id)}
-                  className={cx('flex flex-col rounded-3xl border-[3px] bg-gradient-to-br p-3.5 text-left transition', o.color, path === o.id ? 'border-ink shadow-lg' : 'border-transparent opacity-80')}
+                  className={cx(
+                    'flex flex-col rounded-3xl border-[3px] bg-gradient-to-br p-3.5 text-left transition',
+                    o.color,
+                    path === o.id ? 'border-ink shadow-lg' : 'border-transparent opacity-80',
+                  )}
                 >
                   <span className="flex items-center gap-2">
                     <span className="text-[2.25rem] leading-none">{o.emoji}</span>

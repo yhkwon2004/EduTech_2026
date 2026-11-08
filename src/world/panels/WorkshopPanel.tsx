@@ -1,5 +1,6 @@
 import { CheckCircle2, Hammer, Lock, ShoppingBasket } from 'lucide-react'
 import { emote } from '../emote'
+import { sfx } from '../audio'
 import { useWorld, levelOf, craftSlots } from '../store'
 import { itemInfo, recipeUnitCost } from '../items'
 import { useGame } from '@/game/store'
@@ -96,6 +97,7 @@ export function WorkshopPanel({ onClose, goMarket, goShop }: { onClose: () => vo
                           if (n) {
                             toast(`${p?.emoji} ${p?.name} ${n}개 완성 → 가게 재고로! · +6 EXP`)
                             emote('cheer', p?.emoji)
+                            sfx('harvest')
                           }
                         }}
                       >
@@ -151,6 +153,7 @@ export function WorkshopPanel({ onClose, goMarket, goShop }: { onClose: () => vo
                       if (res === 'ok') {
                         toast(`${p.emoji} ${p.name} 만들기 시작! · 체력 -2`)
                         emote('work', '🍳')
+                        sfx('plant')
                       }
                       else if (res === 'energy') toast('체력이 부족해요', 'bad')
                     }}

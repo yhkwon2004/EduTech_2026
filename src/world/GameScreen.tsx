@@ -30,7 +30,7 @@ function DayTint() {
     return () => clearInterval(t)
   }, [])
   // 아침·저녁 노을, 밤엔 푸르게
-  const tint = h < 5 || h >= 21 ? 'rgba(30,40,110,0.38)' : h < 7 ? 'rgba(255,170,120,0.18)' : h >= 19.5 ? 'rgba(60,50,140,0.28)' : h >= 18 ? 'rgba(255,130,80,0.18)' : 'transparent'
+  const tint = h < 5 || h >= 21 ? 'rgba(16,22,84,0.62)' : h < 7 ? 'rgba(255,170,120,0.2)' : h >= 19.5 ? 'rgba(40,36,126,0.5)' : h >= 18 ? 'rgba(255,130,80,0.22)' : 'transparent'
   return <div className="pointer-events-none absolute inset-0 z-10 transition-colors duration-[3000ms]" style={{ background: tint, mixBlendMode: 'multiply' }} />
 }
 

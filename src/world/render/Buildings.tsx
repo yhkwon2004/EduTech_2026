@@ -1,4 +1,4 @@
-import { memo, type ReactElement, type ReactNode } from 'react'
+import { createContext, memo, useContext, type ReactElement, type ReactNode } from 'react'
 import { iso } from '../map'
 import { box, pts, shade, type P3 } from './geo'
 import { hash } from '@/lib/rng'
@@ -13,13 +13,20 @@ const fl = (side: Side, fixed: number, list: [number, number][]) => pts(list.map
 
 /* ───────── 부품 ───────── */
 
-function Window({ side, fixed, c, half, z0, z1, glow, flowers }: { side: Side; fixed: number; c: number; half: number; z0: number; z1: number; glow?: boolean; flowers?: string }) {
+/** 밤이면 창문마다 불이 켜져요 */
+export const NightCtx = createContext(false)
+
+function Window({ side, fixed, c, half, z0, z1, glow: lit, flowers }: { side: Side; fixed: number; c: number; half: number; z0: number; z1: number; glow?: boolean; flowers?: string }) {
+  const night = useContext(NightCtx)
+  const glow = lit || night
   const a = c - half
   const b = c + half
   const f = 0.05
   const zm = (z0 + z1) / 2
+  const mid = iso(...fp(side, fixed, c, zm))
   return (
     <g>
+      {night && <ellipse className="glow-pulse" cx={mid.x} cy={mid.y + 4} rx={22} ry={16} fill="url(#m-glow)" />}
       <polygon points={fr(side, fixed, a - f, b + f, z0 - 2, z1 + 2)} fill="#FFFDF6" stroke={INK} strokeWidth={0.8} strokeOpacity={0.8} />
       <polygon points={fr(side, fixed, a, b, z0, z1)} fill={glow ? 'url(#m-glass-night)' : 'url(#m-glass)'} />
       <polygon points={fr(side, fixed, a, a + (b - a) * 0.42, zm, z1)} fill="#FFFFFF" opacity={glow ? 0.18 : 0.38} />
@@ -505,7 +512,8 @@ export const CompanyArt = memo(function CompanyArt({ working }: { working: boole
   const b = box(x, y, 3, 3, 0, h)
   const floors = [14, 34, 54, 74, 94]
   const ant = iso(x + 1.5, y + 1.5, h + 8)
-  const lit = (k: number, z: number) => working && hash(`win${k}${z}`) % 3 !== 0
+  const night = useContext(NightCtx)
+  const lit = (k: number, z: number) => (working || night) && hash(`win${k}${z}`) % 3 !== 0
   const cells: ReactElement[] = []
   floors.forEach((z) => {
     ;[0.18, 0.92, 1.66, 2.4].forEach((k, i) => {

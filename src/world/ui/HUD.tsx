@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { fxAt } from '../fx'
+import { sfx } from '../audio'
 import { toLook } from '../avatar'
 import { Backpack, Crown, Footprints, Gift, LocateFixed, Minus, Plus, ScrollText, Settings, Zap } from 'lucide-react'
 import { useWorld, energyNow, levelOf, maxEnergy } from '../store'
@@ -30,7 +32,57 @@ export function Avatar({ size = 44 }: { size?: number }) {
   )
 }
 
-export function HUD({ onMenu, onGo, onClaimStory, onZoom, onRecenter }: { onMenu: (m: 'bag' | 'quest' | 'rank' | 'settings' | 'character') => void; onGo: () => void; onClaimStory: () => void; onZoom: (d: number) => void; onRecenter: () => void }) {
+/** 숫자가 부드럽게 올라가요 */
+function useTween(value: number, ms = 650) {
+  const [v, setV] = useState(value)
+  const shown = useRef(value)
+  useEffect(() => {
+    const a = shown.current
+    if (a === value) return
+    const start = performance.now()
+    let raf = 0
+    const tick = () => {
+      const p = Math.min(1, (performance.now() - start) / ms)
+      const n = Math.round(a + (value - a) * (1 - Math.pow(1 - p, 3)))
+      shown.current = n
+      setV(n)
+      if (p < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [value, ms])
+  return v
+}
+
+/** 값이 바뀌면 떠오르는 글자 */
+function useGainFx(value: number, el: React.RefObject<HTMLElement | null>, fmt: (d: number) => string, color: string, onUp?: () => void) {
+  const prev = useRef(value)
+  const [bump, setBump] = useState(0)
+  useEffect(() => {
+    const d = value - prev.current
+    prev.current = value
+    if (!d) return
+    setBump((b) => b + 1)
+    fxAt(el.current, { float: fmt(d), color: d > 0 ? color : '#FF9C94' })
+    if (d > 0) onUp?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
+  return bump
+}
+
+export function HUD({
+  onMenu,
+  onGo,
+  onClaimStory,
+  onZoom,
+  onRecenter,
+}: {
+  onMenu: (m: 'bag' | 'quest' | 'rank' | 'settings' | 'character') => void
+  onGo: () => void
+  onClaimStory: () => void
+  onZoom: (d: number) => void
+  onRecenter: () => void
+}) {
   const w = useWorld()
   const g = useGame()
   const [now, setNow] = useState(Date.now())
@@ -49,6 +101,20 @@ export function HUD({ onMenu, onGo, onClaimStory, onZoom, onRecenter }: { onMenu
   const time = new Date(now).toTimeString().slice(0, 5)
   const title = w.job ? `${JOB_MAP[w.job.id].name} ${RANKS[w.job.rank].name}` : g.started ? `${g.shopName} 사장님` : w.path === 'owner' ? '예비 사장님' : '취업 준비생'
   const lastRank = g.history[g.history.length - 1]?.rank
+  const coinEl = useRef<HTMLSpanElement>(null)
+  const expEl = useRef<HTMLDivElement>(null)
+  const cashShown = useTween(w.cash)
+  const coinBump = useGainFx(
+    w.cash,
+    coinEl,
+    (d) => `${d > 0 ? '+' : '-'}${won(Math.abs(d))}원`,
+    '#FFE27A',
+    () => {
+      sfx('coin')
+      fxAt(coinEl.current, 'burst', { emoji: '🪙', n: 6 })
+    },
+  )
+  useGainFx(w.exp, expEl, (d) => `${d > 0 ? '+' : ''}${d} EXP`, '#B9F27A')
 
   return (
     <>
@@ -67,8 +133,8 @@ export function HUD({ onMenu, onGo, onClaimStory, onZoom, onRecenter }: { onMenu
           <p className="truncate text-[0.625rem] font-bold leading-tight text-sub">{title}</p>
           <div className="mt-1 flex items-center gap-1">
             <span className="w-7 text-[0.5625rem] font-black text-[#B7860B]">EXP</span>
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/10">
-              <div className="h-full rounded-full bg-sun" style={{ width: `${lv.progress * 100}%` }} />
+            <div ref={expEl} className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/10">
+              <div className="h-full rounded-full bg-gradient-to-r from-[#FFE27A] to-sun transition-[width] duration-700" style={{ width: `${lv.progress * 100}%` }} />
             </div>
           </div>
           <div className="mt-0.5 flex items-center gap-1">
@@ -86,7 +152,7 @@ export function HUD({ onMenu, onGo, onClaimStory, onZoom, onRecenter }: { onMenu
 
       {/* 가운데 위: 날짜·날씨 */}
       <div className="pointer-events-none absolute left-1/2 top-2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-2xl border-2 border-[#1B1D45]/70 bg-gradient-to-b from-[#FFF8E1] to-[#FCEBC2] px-3 py-1.5 shadow-lg">
-        <span className="text-[1.375rem] leading-none">{wx.icon}</span>
+        <span className="float-soft text-[1.375rem] leading-none">{new Date(now).getHours() >= 19 || new Date(now).getHours() < 6 ? (wx.icon === '☀️' ? '🌙' : wx.icon === '⛅' ? '☁️' : wx.icon) : wx.icon}</span>
         <span className="leading-tight">
           <span className="block text-[0.75rem] font-black">{formatKo(date)}</span>
           <span className="block text-[0.625rem] font-bold text-sub">
@@ -104,8 +170,15 @@ export function HUD({ onMenu, onGo, onClaimStory, onZoom, onRecenter }: { onMenu
             <span className="hidden text-[0.625rem] font-bold text-sub sm:inline">· {LEAGUE_NAME(g.tier, g.region)}</span>
           </button>
         )}
-        <span className="flex h-9 items-center gap-1 rounded-full border-2 border-[#1B1D45]/70 bg-gradient-to-b from-[#FFE58A] to-sun px-3 text-[0.875rem] font-black text-ink shadow-lg">
-          🪙 {won(w.cash)}
+        <span
+          ref={coinEl}
+          key={coinBump}
+          className={cx(
+            'shine-sweep flex h-9 items-center gap-1 rounded-full border-2 border-[#1B1D45]/70 bg-gradient-to-b from-[#FFE58A] to-sun px-3 text-[0.875rem] font-black tabular-nums text-ink shadow-lg',
+            coinBump > 0 && 'count-bump',
+          )}
+        >
+          🪙 {won(cashShown)}
         </span>
       </div>
 
@@ -144,11 +217,17 @@ export function HUD({ onMenu, onGo, onClaimStory, onZoom, onRecenter }: { onMenu
             <span className="block truncate text-[0.625rem] font-semibold text-sub">{story.current.hint}</span>
           </span>
           {story.done ? (
-            <button onClick={onClaimStory} className="btn-game flex h-9 shrink-0 items-center gap-1 rounded-xl border-b-[3px] border-[#2D7F39] bg-gradient-to-b from-[#5FCB6D] to-leaf px-3 text-[0.75rem] font-black text-white">
+            <button
+              onClick={onClaimStory}
+              className="btn-game flex h-9 shrink-0 items-center gap-1 rounded-xl border-b-[3px] border-[#2D7F39] bg-gradient-to-b from-[#5FCB6D] to-leaf px-3 text-[0.75rem] font-black text-white"
+            >
               <Gift className="size-4" /> 받기
             </button>
           ) : (
-            <button onClick={onGo} className="btn-game flex h-9 shrink-0 items-center gap-1 rounded-xl border-b-[3px] border-primary-700 bg-gradient-to-b from-[#4C94FF] to-primary px-3 text-[0.75rem] font-black text-white">
+            <button
+              onClick={onGo}
+              className="btn-game flex h-9 shrink-0 items-center gap-1 rounded-xl border-b-[3px] border-primary-700 bg-gradient-to-b from-[#4C94FF] to-primary px-3 text-[0.75rem] font-black text-white"
+            >
               <Footprints className="size-4" /> 가기
             </button>
           )}

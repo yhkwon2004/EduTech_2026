@@ -52,7 +52,10 @@ export function TreePanel({ onClose, goAcademy, openLesson }: { onClose: () => v
     <Panel title="배움 나무" icon="🌳" color="#3FA34D" wide onClose={onClose}>
       <div className="grid h-full gap-3 md:grid-cols-[17rem_1fr]">
         {/* 나무 */}
-        <div className="relative flex min-h-[14rem] flex-col overflow-hidden rounded-2xl border-2 border-black/5" style={{ background: isNight() ? 'linear-gradient(180deg,#26306B 0%,#46508F 55%,#6C8F5A 56%,#4F7A45 100%)' : 'linear-gradient(180deg,#BDE8FF 0%,#E9F8FF 55%,#A8DB8A 56%,#86C66E 100%)' }}>
+        <div
+          className="relative flex min-h-[14rem] flex-col overflow-hidden rounded-2xl border-2 border-black/5"
+          style={{ background: isNight() ? 'linear-gradient(180deg,#26306B 0%,#46508F 55%,#6C8F5A 56%,#4F7A45 100%)' : 'linear-gradient(180deg,#BDE8FF 0%,#E9F8FF 55%,#A8DB8A 56%,#86C66E 100%)' }}
+        >
           <span className="pointer-events-none absolute left-3 top-2 text-[0.875rem] opacity-80">{isNight() ? '🌙' : '☁️'}</span>
           <span className="pointer-events-none absolute right-6 top-5 text-[0.625rem] opacity-70">{isNight() ? '✨' : '☁️'}</span>
           <div ref={treeBox} className="relative flex flex-1 items-end justify-center">
@@ -110,7 +113,10 @@ export function TreePanel({ onClose, goAcademy, openLesson }: { onClose: () => v
           </div>
           <div className="no-scrollbar flex gap-1 overflow-x-auto">
             {TREE_STAGES.map((st, k) => (
-              <div key={st.name} className={cx('flex min-w-[4.6rem] flex-1 flex-col items-center rounded-xl px-1 py-1.5 text-center', k <= t.index ? 'bg-teal-50 ring-2 ring-teal/30' : 'bg-black/5 opacity-60')}>
+              <div
+                key={st.name}
+                className={cx('flex min-w-[4.6rem] flex-1 flex-col items-center rounded-xl px-1 py-1.5 text-center', k <= t.index ? 'bg-teal-50 ring-2 ring-teal/30' : 'bg-black/5 opacity-60')}
+              >
                 <span className={cx('text-[1.25rem] leading-none', k > t.index && 'grayscale')}>{st.emoji}</span>
                 <span className="mt-0.5 text-[0.5625rem] font-black leading-tight">{st.name}</span>
                 <span className="text-[0.5rem] font-bold text-sub">레슨 {st.need}</span>

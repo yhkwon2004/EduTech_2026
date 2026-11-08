@@ -52,6 +52,25 @@ function Sea() {
       />,
     )
   }
+  // 바다 반짝임
+  for (let i = 0; i < 22; i++) {
+    const side = i % 4
+    const t = r()
+    const off = 0.8 + r() * 6
+    const [x, y] = side === 0 ? [t * MAP_W, MAP_H + off] : side === 1 ? [MAP_W + off, t * MAP_H] : side === 2 ? [t * MAP_W, -off] : [-off, t * MAP_H]
+    const p = iso(x, y, WATER_LEVEL)
+    const k = 2.2 + r() * 1.6
+    const n = (v: number) => v.toFixed(2)
+    waves.push(
+      <path
+        key={`sp${i}`}
+        className="twinkle"
+        style={{ animationDelay: `${n(r() * 2.6)}s`, animationDuration: `${n(2 + r() * 2)}s` }}
+        d={`M${n(p.x)} ${n(p.y - k * 2)} l${n(k * 0.45)} ${n(k * 1.55)} l${n(k * 1.55)} ${n(k * 0.45)} l${n(-k * 1.55)} ${n(k * 0.45)} l${n(-k * 0.45)} ${n(k * 1.55)} l${n(-k * 0.45)} ${n(-k * 1.55)} l${n(-k * 1.55)} ${n(-k * 0.45)} l${n(k * 1.55)} ${n(-k * 0.45)} z`}
+        fill="#FFFFFF"
+      />,
+    )
+  }
   const ring = (pad: number) =>
     poly([
       [-pad, -pad, WATER_LEVEL],
@@ -215,6 +234,10 @@ function TileArt({ x, y, t }: { x: number; y: number; t: G }) {
         if (h % 2 === 0)
           out.push(
             <path key="w" className="water-shimmer" style={{ animationDelay: `${(h % 9) * 0.3}s` }} d={`M${c.x - 10} ${c.y - 1} q5 -3 10 0 M${c.x + 2} ${c.y + 5} q4 -2 8 0`} stroke="#D9F6FF" strokeWidth={1.4} fill="none" strokeLinecap="round" />,
+          )
+        else
+          out.push(
+            <path key="sp" className="twinkle" style={{ animationDelay: `${(h % 7) * 0.45}s` }} d={`M${c.x + 3} ${c.y - 4} l1.1 2.6 l2.6 1.1 l-2.6 1.1 l-1.1 2.6 l-1.1 -2.6 l-2.6 -1.1 l2.6 -1.1 z`} fill="#FFFFFF" />,
           )
       }
       break

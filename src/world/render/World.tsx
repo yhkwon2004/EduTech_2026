@@ -4,7 +4,8 @@ import { useWorld, levelOf } from '../store'
 import { useGame, canPlayToday } from '@/game/store'
 import { useScreen } from '../screen'
 import { GroundLayer } from './Ground'
-import { AcademyArt, BoardArt, CompanyArt, MarketArt, RivalArt, ShopArt, SupportArt, WorkshopArt } from './Buildings'
+import { AcademyArt, BoardArt, CompanyArt, MarketArt, NightCtx, RivalArt, ShopArt, SupportArt, WorkshopArt } from './Buildings'
+import { sfx } from '../audio'
 import { Crop, Deco, LockedPlot, PlotHit } from './Props'
 import { CharacterNode, type Act, type Expr, type Look } from './Character'
 import { VILLAGERS, toLook } from '../avatar'
@@ -64,7 +65,22 @@ const sameView = (a: CharView | undefined, b: CharView) =>
   !!a && a.x === b.x && a.y === b.y && a.walking === b.walking && a.yaw === b.yaw && a.act === b.act && a.expr === b.expr && a.bubble === b.bubble && a.hidden === b.hidden
 
 function newWalker(x: number, y: number, yaw = 20): Walker {
-  return { x, y, path: [], walking: false, yaw, target: yaw, act: null, actUntil: 0, expr: null, bubble: null, bubbleUntil: 0, nextIdle: performance.now() + 4000 + Math.random() * 4000, idleSince: performance.now(), pauseUntil: 0 }
+  return {
+    x,
+    y,
+    path: [],
+    walking: false,
+    yaw,
+    target: yaw,
+    act: null,
+    actUntil: 0,
+    expr: null,
+    bubble: null,
+    bubbleUntil: 0,
+    nextIdle: performance.now() + 4000 + Math.random() * 4000,
+    idleSince: performance.now(),
+    pauseUntil: 0,
+  }
 }
 function viewOf(w: Walker, hidden = false): CharView {
   return { x: Math.round(w.x), y: Math.round(w.y), walking: w.walking, yaw: quantYaw(w.yaw), act: w.act, expr: w.expr, bubble: w.bubble, hidden }
@@ -76,6 +92,31 @@ function startAct(w: Walker, act: Act, t: number, expr: Expr | null = null) {
 }
 
 const SPEED = 3.6 // 타일/초
+const BUTTERFLY_SPOTS = DECOS.filter((d) => d.kind === 'flowers')
+  .filter((_, i) => i % 3 === 0)
+  .slice(0, 5)
+const BF_COLORS = ['#FFD35A', '#FF9EC4', '#FFFFFF', '#9FD8FF', '#FFB86B']
+
+/** 밤 불빛 (어둠 위에 더해지는 빛): 가로등 · 창문 불빛 */
+const NIGHT_LIGHTS = (() => {
+  const out: ReactElement[] = []
+  DECOS.filter((d) => d.kind === 'lamp').forEach((d, i) => {
+    const c = iso(d.x + 0.5, d.y + 0.5)
+    out.push(<ellipse key={`lg${i}`} cx={c.x} cy={c.y} rx={46} ry={22} fill="url(#nl-warm)" />)
+    out.push(<circle key={`lh${i}`} className="glow-pulse" cx={c.x} cy={c.y - 49} r={30} fill="url(#nl-warm)" style={{ animationDelay: `${i * 0.4}s` }} />)
+  })
+  const spill = (key: string, x: number, y: number, w: number, d: number, z: number, big = 1) => {
+    const a = iso(x + w / 2, y + d, z)
+    const b = iso(x + w, y + d / 2, z)
+    out.push(<ellipse key={`${key}a`} cx={a.x} cy={a.y} rx={26 * big * Math.sqrt(w)} ry={16 * big} fill="url(#nl-win)" />)
+    out.push(<ellipse key={`${key}b`} cx={b.x} cy={b.y} rx={22 * big * Math.sqrt(d)} ry={14 * big} fill="url(#nl-win)" />)
+    const g = iso(x + w / 2, y + d + 0.4)
+    out.push(<ellipse key={`${key}g`} cx={g.x} cy={g.y} rx={30 * Math.sqrt(w)} ry={12} fill="url(#nl-warm)" opacity={0.6} />)
+  }
+  BUILDINGS.filter((b) => b.id !== 'board' && b.id !== 'tree').forEach((b) => spill(b.id, b.x, b.y, b.w, b.d, b.id === 'company' ? 50 : 22, b.id === 'company' ? 1.8 : 1))
+  RIVAL_LOTS.forEach((r) => spill(`r${r.index}`, r.x, r.y, 2, 2, 20))
+  return out
+})()
 const NPC_COUNT = 7
 
 function doorOf(hit: HitId): { x: number; y: number } | null {
@@ -129,7 +170,11 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
   const onArriveRef = useRef(onArrive)
   onArriveRef.current = onArrive
   const playerEl = useRef<SVGGElement>(null)
+  const dustEl = useRef<SVGGElement>(null)
+  const routeEl = useRef<SVGGElement>(null)
+  const [route, setRoute] = useState<{ pts: { x: number; y: number }[]; k: number } | null>(null)
   const camEl = useRef<SVGGElement>(null)
+  const lightsEl = useRef<SVGGElement>(null)
   const cam = useRef({ x: footOf(world.pos).x, y: footOf(world.pos).y - 40, zoom: 1, follow: true })
   const [zoomLevel, setZoomLevel] = useState(1)
   const pushPlayer = useCallback(() => {
@@ -177,16 +222,19 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
         p.nextIdle = t + 7000
         pushPlayer()
         // 패널이 열려 있어 루프가 멈춰 있어도 끝나면 풀리게
-        window.setTimeout(() => {
-          const q = player.current
-          const t2 = performance.now()
-          if (q.act && t2 >= q.actUntil) {
-            q.act = null
-            q.expr = null
-          }
-          if (q.bubble && t2 >= q.bubbleUntil) q.bubble = null
-          pushPlayer()
-        }, Math.max(ACT_MS[st.act], 2300) + 50)
+        window.setTimeout(
+          () => {
+            const q = player.current
+            const t2 = performance.now()
+            if (q.act && t2 >= q.actUntil) {
+              q.act = null
+              q.expr = null
+            }
+            if (q.bubble && t2 >= q.bubbleUntil) q.bubble = null
+            pushPlayer()
+          },
+          Math.max(ACT_MS[st.act], 2300) + 50,
+        )
       }),
     [pushPlayer],
   )
@@ -202,7 +250,9 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     const halfH = screen.height / 2 / z
     c.x = Math.min(WORLD_BOUNDS.right - halfW * 0.4, Math.max(WORLD_BOUNDS.left + halfW * 0.4, c.x))
     c.y = Math.min(WORLD_BOUNDS.bottom - halfH * 0.3, Math.max(WORLD_BOUNDS.top + halfH * 0.3, c.y))
-    camEl.current?.setAttribute('transform', `translate(${screen.width / 2 - c.x * z},${screen.height / 2 - c.y * z}) scale(${z})`)
+    const tf = `translate(${screen.width / 2 - c.x * z},${screen.height / 2 - c.y * z}) scale(${z})`
+    camEl.current?.setAttribute('transform', tf)
+    lightsEl.current?.setAttribute('transform', tf)
   }, [screen.width, screen.height, baseZoom])
 
   // ── 매 프레임: 이동 + 몸 돌리기 + 동작 + 카메라
@@ -211,6 +261,8 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     let last = performance.now()
     let energyCheck = 0
     let tired = false
+    let nextDust = 0
+    let stepN = 0
     const step = (w: Walker, dt: number) => {
       if (!w.path.length) {
         w.walking = false
@@ -262,6 +314,31 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
         if (moving) {
           p.idleSince = t
           if (p.act && p.act !== 'cheer') p.act = null
+          // 발걸음: 흙먼지 + 작은 발소리
+          if (t > nextDust) {
+            nextDust = t + 210
+            stepN++
+            const fp = footOf(p)
+            const g = dustEl.current
+            if (g) {
+              const e = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse')
+              e.setAttribute('cx', String(fp.x + (stepN % 2 ? 5 : -5)))
+              e.setAttribute('cy', String(fp.y + 1))
+              e.setAttribute('rx', '5')
+              e.setAttribute('ry', '2.4')
+              e.setAttribute('fill', '#F4EBDD')
+              e.setAttribute('class', 'dust')
+              g.appendChild(e)
+              window.setTimeout(() => e.remove(), 620)
+            }
+            if (stepN % 2) sfx('step')
+          }
+          // 지나온 길 점은 지워요
+          const re = routeEl.current
+          if (re) {
+            const passed = re.childElementCount - p.path.length
+            for (let k = 0; k < re.childElementCount - 1; k++) (re.children[k] as SVGElement).style.opacity = k < passed ? '0' : ''
+          }
         }
         turn(p, dt)
         const f = footOf(p)
@@ -287,6 +364,7 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
         pushPlayer()
         if (wasWalking && !p.walking) {
           useWorld.getState().setPos({ x: Math.round(p.x), y: Math.round(p.y) })
+          setRoute(null)
           if (pending.current) {
             const hit = pending.current
             pending.current = null
@@ -445,6 +523,7 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
       return
     }
     p.path = path
+    setRoute({ pts: path, k: Date.now() })
   }, [])
 
   useImperativeHandle(
@@ -504,6 +583,13 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     const hitEl = el?.closest('[data-hit]')
     if (hitEl) {
       const hit = hitEl.getAttribute('data-hit') as HitId
+      sfx('tap')
+      if (hitEl.classList.contains('hit-building')) {
+        hitEl.classList.remove('bldg-bounce')
+        void (hitEl as SVGGElement).getBBox()
+        hitEl.classList.add('bldg-bounce')
+        window.setTimeout(() => hitEl.classList.remove('bldg-bounce'), 450)
+      }
       const door = targetOf(hit)
       if (door) walkToTile(door, hit)
       return
@@ -599,7 +685,21 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
   }
   items.push({
     depth: pView.x + pView.y + 0.5,
-    el: <CharacterNode key="player" ref={playerEl} look={look} walking={pView.walking} yaw={pView.yaw} act={pView.act} expr={pView.expr} bubble={pView.bubble} name={world.name || '나'} me speed={0.42} />,
+    el: (
+      <CharacterNode
+        key="player"
+        ref={playerEl}
+        look={look}
+        walking={pView.walking}
+        yaw={pView.yaw}
+        act={pView.act}
+        expr={pView.expr}
+        bubble={pView.bubble}
+        name={world.name || '나'}
+        me
+        speed={0.42}
+      />
+    ),
   })
   npcs.current.forEach((n, i) => {
     const t = npcViews[i]
@@ -625,6 +725,25 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
       ),
     })
   })
+  // 낮엔 꽃밭 위 나비
+  if (!night)
+    BUTTERFLY_SPOTS.forEach((d, i) => {
+      const c = iso(d.x + 0.5, d.y + 0.5)
+      items.push({
+        depth: d.x + d.y + 0.6,
+        el: (
+          <g key={`bf${i}`} transform={`translate(${c.x},${c.y - 6})`} style={{ pointerEvents: 'none' }}>
+            <g className="bfly" style={{ animationDuration: `${7 + (i % 3) * 1.6}s`, animationDelay: `${-i * 1.3}s` }}>
+              <g className="flutter" style={{ animationDelay: `${i * 0.05}s` }}>
+                <path d="M0 0 C-5 -6 -9 -3 -6 1 C-8 3 -4 6 0 1 Z" fill={BF_COLORS[i % BF_COLORS.length]} stroke="#5A3E5A" strokeWidth={0.5} />
+                <path d="M0 0 C5 -6 9 -3 6 1 C8 3 4 6 0 1 Z" fill={BF_COLORS[i % BF_COLORS.length]} stroke="#5A3E5A" strokeWidth={0.5} />
+              </g>
+              <ellipse cx={0} cy={1} rx={0.7} ry={2.4} fill="#4A3426" />
+            </g>
+          </g>
+        ),
+      })
+    })
   items.sort((a, b) => a.depth - b.depth)
 
   // ── 머리 위 알림 (퀘스트·완성·영업 가능)
@@ -691,7 +810,28 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
         <rect width={screen.width} height={screen.height} fill="url(#sea-sun)" />
         <g ref={camEl}>
           <GroundLayer />
-          {items.map((i) => i.el)}
+          {route && route.pts.length > 1 && (
+            <g key={route.k} ref={routeEl} style={{ pointerEvents: 'none' }}>
+              {route.pts.slice(0, -1).map((pt, k) => {
+                const c = iso(pt.x + 0.5, pt.y + 0.5)
+                return (
+                  <ellipse key={k} className="route-dot" cx={c.x} cy={c.y} rx={3.2} ry={1.7} fill="#FFFFFF" opacity={0.85} style={{ animationDelay: `${k * 0.06}s`, transition: 'opacity 0.25s' }} />
+                )
+              })}
+              {(() => {
+                const end = route.pts[route.pts.length - 1]
+                const c = iso(end.x + 0.5, end.y + 0.5)
+                return (
+                  <g transform={`translate(${c.x},${c.y})`}>
+                    <ellipse rx={13} ry={6.5} fill="none" stroke="#FFE27A" strokeWidth={2.4} className="dest-pulse" />
+                    <ellipse rx={7} ry={3.5} fill="#FFE27A" opacity={0.85} />
+                  </g>
+                )
+              })()}
+            </g>
+          )}
+          <g ref={dustEl} style={{ pointerEvents: 'none' }} />
+          <NightCtx.Provider value={night}>{items.map((i) => i.el)}</NightCtx.Provider>
           {ripple && (
             <g key={ripple.k} transform={`translate(${ripple.x},${ripple.y})`} style={{ pointerEvents: 'none' }}>
               <ellipse className="tap-ripple" rx={18} ry={9} fill="none" stroke="#fff" strokeWidth={3} />
@@ -700,6 +840,22 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
           {markers}
         </g>
       </svg>
+      {night && (
+        <svg width={screen.width} height={screen.height} className="pointer-events-none absolute inset-0 z-[11] block" style={{ mixBlendMode: 'screen' }} aria-hidden>
+          <defs>
+            <radialGradient id="nl-warm">
+              <stop offset="0" stopColor="#FFC965" stopOpacity="0.55" />
+              <stop offset="0.45" stopColor="#FF9E3D" stopOpacity="0.2" />
+              <stop offset="1" stopColor="#FF9E3D" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="nl-win">
+              <stop offset="0" stopColor="#FFE3A0" stopOpacity="0.42" />
+              <stop offset="1" stopColor="#FFB85C" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <g ref={lightsEl}>{NIGHT_LIGHTS}</g>
+        </svg>
+      )}
     </div>
   )
 })

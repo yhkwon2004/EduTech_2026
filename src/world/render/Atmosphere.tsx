@@ -37,18 +37,47 @@ const PETALS = Array.from({ length: 9 }, (_, i) => ({
   color: ['#FFC2D6', '#FFFFFF', '#FFE08A', '#C9F0A8'][i % 4],
 }))
 
-/** 화면 위에 얹는 공기감: 구름·구름 그림자·햇빛·꽃잎·비네트 */
+/** 새 떼 (낮) */
+const FLOCKS = [
+  { top: '14%', dur: 38, delay: -6, s: 1, n: 3 },
+  { top: '30%', dur: 52, delay: -30, s: 0.75, n: 4 },
+]
+function Bird({ k }: { k: number }) {
+  return (
+    <svg width={18} height={10} viewBox="0 0 18 10" className="absolute" style={{ left: (k % 2) * 14 + k * 9, top: (k % 2) * 9 + (k === 3 ? 4 : 0) }} aria-hidden>
+      <g className="flap" style={{ animationDelay: `${k * 0.09}s` }}>
+        <path d="M1 3 Q5 0 9 5 Q13 0 17 3" fill="none" stroke="#2E3B55" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+    </svg>
+  )
+}
+
+/** 반딧불 (밤) */
+const FIREFLIES = Array.from({ length: 14 }, (_, i) => ({ left: `${(i * 41 + 7) % 96}%`, top: `${25 + ((i * 29) % 65)}%`, dur: 4 + (i % 5) * 0.9, delay: -i * 0.7 }))
+/** 밤하늘 반짝임 */
+const STARS = Array.from({ length: 16 }, (_, i) => ({ left: `${(i * 53 + 11) % 100}%`, top: `${(i * 17) % 34}%`, d: -i * 0.4, s: 2 + (i % 3) }))
+
+/** 화면 위에 얹는 공기감: 구름·구름 그림자·햇빛·꽃잎·새·반딧불·비네트 */
 export const Atmosphere = memo(function Atmosphere({ night }: { night: boolean }) {
   return (
     <div className="pointer-events-none absolute inset-0 z-[8] overflow-hidden" aria-hidden>
       {/* 구름 그림자 (땅 위를 지나감) */}
       {CLOUDS.map((c, i) => (
-        <div key={`s${i}`} className="cloud-drift absolute" style={{ top: `calc(${c.top} + 70px)`, animationDuration: `${c.dur}s`, animationDelay: `${c.delay}s`, opacity: 0.09, filter: 'blur(10px)' }}>
+        <div
+          key={`s${i}`}
+          className="cloud-drift absolute"
+          style={{ top: `calc(${c.top} + 70px)`, animationDuration: `${c.dur}s`, animationDelay: `${c.delay}s`, opacity: 0.09, filter: 'blur(10px)' }}
+        >
           <CloudShape w={c.w * 1.3} shadow />
         </div>
       ))}
       {/* 햇빛 */}
-      {!night && <div className="absolute inset-0" style={{ background: 'radial-gradient(120% 90% at 12% 0%, rgba(255,247,214,0.38) 0%, rgba(255,247,214,0.08) 38%, transparent 60%)', mixBlendMode: 'soft-light' }} />}
+      {!night && (
+        <div
+          className="absolute inset-0"
+          style={{ background: 'radial-gradient(120% 90% at 12% 0%, rgba(255,247,214,0.38) 0%, rgba(255,247,214,0.08) 38%, transparent 60%)', mixBlendMode: 'soft-light' }}
+        />
+      )}
       {!night && <div className="sun-rays absolute -left-[10%] -top-[30%] h-[90%] w-[60%]" />}
       {/* 꽃잎 */}
       {!night &&
@@ -61,10 +90,42 @@ export const Atmosphere = memo(function Atmosphere({ night }: { night: boolean }
         ))}
       {/* 구름 */}
       {CLOUDS.map((c, i) => (
-        <div key={`c${i}`} className="cloud-drift absolute" style={{ top: c.top, animationDuration: `${c.dur}s`, animationDelay: `${c.delay}s`, opacity: night ? c.op * 0.3 : c.op * 0.34, filter: "blur(0.6px)" }}>
+        <div
+          key={`c${i}`}
+          className="cloud-drift absolute"
+          style={{ top: c.top, animationDuration: `${c.dur}s`, animationDelay: `${c.delay}s`, opacity: night ? c.op * 0.3 : c.op * 0.34, filter: 'blur(0.6px)' }}
+        >
           <CloudShape w={c.w} />
         </div>
       ))}
+      {/* 새 떼 */}
+      {!night &&
+        FLOCKS.map((f, i) => (
+          <div key={`f${i}`} className="bird-fly absolute left-0" style={{ top: f.top, animationDuration: `${f.dur}s`, animationDelay: `${f.delay}s`, ['--s' as string]: f.s }}>
+            <div className="relative h-6 w-16">
+              {Array.from({ length: f.n }, (_, k) => (
+                <Bird key={k} k={k} />
+              ))}
+            </div>
+          </div>
+        ))}
+      {/* 밤: 별 반짝 · 반딧불 */}
+      {night &&
+        STARS.map((st, i) => (
+          <span
+            key={`st${i}`}
+            className="twinkle absolute rounded-full bg-white"
+            style={{ left: st.left, top: st.top, width: st.s, height: st.s, animationDelay: `${st.d}s`, boxShadow: '0 0 6px #fff' }}
+          />
+        ))}
+      {night &&
+        FIREFLIES.map((f, i) => (
+          <span
+            key={`ff${i}`}
+            className="screen-firefly absolute size-[5px] rounded-full"
+            style={{ left: f.left, top: f.top, animationDuration: `${f.dur}s`, animationDelay: `${f.delay}s`, background: '#F6FF9C', boxShadow: '0 0 8px 3px rgba(239,255,122,0.65)' }}
+          />
+        ))}
       {/* 비네트 */}
       <div className="absolute inset-0" style={{ background: 'radial-gradient(130% 120% at 50% 45%, transparent 55%, rgba(16,30,60,0.28) 100%)' }} />
     </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { emote } from '../emote'
+import { sfx } from '../audio'
 import { useWorld, levelOf } from '../store'
 import { CROPS, INGREDIENTS, buyPrice, itemInfo, priceFactor, seedPrice, sellPrice } from '../items'
 import { useGame } from '@/game/store'
@@ -50,7 +51,10 @@ export function MarketPanel({ onClose }: { onClose: () => void }) {
 
   const pay = (ok: boolean, msg: string) => {
     toast(ok ? msg : '돈이 부족해요', ok ? 'good' : 'bad')
-    if (ok) emote('nod', '🛍️')
+    if (ok) {
+      emote('nod', '🛍️')
+      sfx('pop')
+    }
   }
 
   return (

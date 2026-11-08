@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { emote } from '../emote'
+import { sfx } from '../audio'
 import { Briefcase, Check, ChevronRight, LogOut, Repeat, TrendingUp } from 'lucide-react'
 import { CATEGORY_MAP } from '@/data/categories'
 import { LESSON_MAP } from '@/data/courses'
@@ -145,6 +146,7 @@ function WorkTab({ openLesson }: { openLesson: (id: string) => void }) {
           setWorking(false)
           toast(`퇴근! 일급 +${won(r.pay)}원 · 실적 +${r.perf} · +15 EXP`)
           emote(r.perf >= 70 ? 'cheer' : 'nod', '💼')
+          sfx(r.perf >= 70 ? 'correct' : 'page')
         }}
       />
     )
@@ -306,6 +308,7 @@ function CareerTab({ onStartup, openLesson }: { onStartup: () => void; openLesso
                   if (w.promote(rl)) {
                     toast(`🎉 ${next.name}으로 승진했어요! 일급 ${won(next.pay)}원 · +40 EXP`, 'level')
                     emote('cheer', '🎉')
+                    sfx('levelup')
                   }
                 }}
               >

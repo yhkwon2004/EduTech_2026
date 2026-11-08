@@ -32,10 +32,7 @@ export function NpcQuizPanel({ villager, onClose, openLesson }: { villager: numb
     if (ok) {
       sfx('correct')
       fxAt(btns.current[String(o)], 'burst', { n: 14 })
-      window.setTimeout(() => {
-        sfx('coin')
-        fxAt(btns.current[String(o)], { float: '+500원 · +5 EXP', color: '#FFE27A' })
-      }, 300)
+      window.setTimeout(() => fxAt(btns.current[String(o)], { float: '정답!', color: '#8CF2A6' }, { big: true }), 200)
       w.addCash(500)
       w.addExp(5)
       emote('cheer', '💡')
@@ -85,9 +82,7 @@ export function NpcQuizPanel({ villager, onClose, openLesson }: { villager: numb
             </div>
           ) : (
             <div className={cx('animate-pop rounded-2xl p-3', right ? 'bg-teal-50' : 'bg-coral-50')}>
-              <p className={cx('text-[1rem] font-black', right ? 'text-teal' : 'text-coral')}>
-                {right ? '⭕ 정답! +500원 · +5 EXP' : `❌ 정답은 ${quiz.truth ? 'O' : 'X'}예요 · +1 EXP`}
-              </p>
+              <p className={cx('text-[1rem] font-black', right ? 'text-teal' : 'text-coral')}>{right ? '⭕ 정답! +500원 · +5 EXP' : `❌ 정답은 ${quiz.truth ? 'O' : 'X'}예요 · +1 EXP`}</p>
               {!quiz.truth && <p className="mt-0.5 text-[0.8125rem] font-black">맞는 답: {quiz.correctText}</p>}
               <p className="mt-0.5 text-[0.8125rem] font-semibold text-ink/80">{quiz.explain}</p>
               <div className="mt-2 flex gap-2">
