@@ -35,6 +35,9 @@ export const FactoryArt = memo(function FactoryArt({ working, lines, name }: { w
   const chimneyN = Math.max(1, Math.min(3, lines - 1))
   const chimneys = Array.from({ length: chimneyN }, (_, i) => box(x + 0.35 + i * 0.9, y + 0.3, 0.3, 0.3, h + 12, 22 + i * 3))
   const dock = box(x + w, y + 0.8, 0.5, 1.4, 0, 10)
+  // 증설: 라인 3개부터 앞쪽 별관(포장동), 5개면 옥상 사무동
+  const annex = lines >= 3 ? box(x + 2.1, y + d, 0.9, 0.8, 0, 24) : null
+  const office = lines >= 5 ? box(x + 1.6, y + 0.2, 1.3, 1.1, h + 14, 26) : null
   const tank = box(x + 0.2, y + d - 0.5, 0.4, 0.4, h, 16)
   const doorL = iso(x + 1.5, y + d, 0)
   const win = (side: 'y' | 'x', k: number) =>
@@ -132,6 +135,39 @@ export const FactoryArt = memo(function FactoryArt({ working, lines, name }: { w
           <polygon points={t.glass} fill={night ? 'url(#m-glass-night)' : 'url(#m-tower-glass)'} stroke="#4A5570" strokeWidth={0.8} />
         </g>
       ))}
+      {/* 옥상 사무동 (라인 5개) */}
+      {office && (
+        <g>
+          <polygon points={office.left} fill="#EEF1F7" />
+          <polygon points={office.right} fill="#C3CBD9" />
+          <polygon points={office.top} fill="#8A96B3" stroke="#4A5570" strokeWidth={0.8} />
+          {[0.15, 0.75].map((k) => (
+            <polygon
+              key={k}
+              points={pts([
+                [x + 1.6 + k, y + 1.3, h + 20],
+                [x + 1.6 + k + 0.4, y + 1.3, h + 20],
+                [x + 1.6 + k + 0.4, y + 1.3, h + 34],
+                [x + 1.6 + k, y + 1.3, h + 34],
+              ])}
+              fill={night ? 'url(#m-glass-night)' : 'url(#m-tower-glass)'}
+              stroke="#5B6477"
+              strokeWidth={0.6}
+            />
+          ))}
+          <polygon
+            points={pts([
+              [x + 2.9, y + 0.4, h + 20],
+              [x + 2.9, y + 1.0, h + 20],
+              [x + 2.9, y + 1.0, h + 34],
+              [x + 2.9, y + 0.4, h + 34],
+            ])}
+            fill={night ? 'url(#m-glass-night)' : 'url(#m-tower-glass)'}
+            stroke="#5B6477"
+            strokeWidth={0.6}
+          />
+        </g>
+      )}
       {/* 물탱크 */}
       <polygon points={tank.left} fill="#DDE2E8" />
       <polygon points={tank.right} fill="#AEB7C4" />
@@ -149,6 +185,38 @@ export const FactoryArt = memo(function FactoryArt({ working, lines, name }: { w
           </g>
         )
       })}
+      {/* 앞쪽 별관: 포장동 (라인 3개) */}
+      {annex && (
+        <g>
+          <polygon points={annex.left} fill="#E4E8EF" />
+          <polygon points={annex.right} fill="#B9C1CE" />
+          <polygon points={annex.top} fill="#6C7A99" stroke="#4A5570" strokeWidth={0.8} />
+          <polygon
+            points={pts([
+              [x + 2.25, y + d + 0.8, 6],
+              [x + 2.85, y + d + 0.8, 6],
+              [x + 2.85, y + d + 0.8, 18],
+              [x + 2.25, y + d + 0.8, 18],
+            ])}
+            fill={night ? 'url(#m-glass-night)' : 'url(#m-glass)'}
+            stroke="#5B6477"
+            strokeWidth={0.7}
+          />
+          <text
+            {...(() => {
+              const q = iso(x + 2.55, y + d + 0.8, 21)
+              return { x: q.x, y: q.y }
+            })()}
+            textAnchor="middle"
+            fontSize={6.5}
+            fontWeight={900}
+            fill="#2E3B8A"
+            fontFamily="Pretendard Variable, Pretendard, sans-serif"
+          >
+            포장동
+          </text>
+        </g>
+      )}
       {/* 가동 표시등 */}
       <circle cx={doorL.x + 20} cy={doorL.y - 36} r={2.6} fill={working ? '#5DFF8A' : '#F25C54'} className={working ? 'blink' : undefined} />
       <Sign x={x + 1.5} y={y + 3} z={44} text={name || '식품 공장'} bg="#2E3B8A" emoji="🏭" />

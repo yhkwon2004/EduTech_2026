@@ -89,6 +89,9 @@ export interface Settings {
   bgm?: boolean
   /** 효과음 */
   sfx?: boolean
+  /** AI 경영진 — 내 Anthropic API 키 (이 기기에만 저장) */
+  aiKey?: string
+  aiModel?: string
 }
 
 export interface LessonProgress {

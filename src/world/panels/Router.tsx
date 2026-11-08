@@ -79,7 +79,7 @@ export function PanelRouter({
         />
       )
     case 'factory':
-      return <FactoryPanel onClose={onClose} goMarket={() => walk('market')} />
+      return <FactoryPanel onClose={onClose} goMarket={() => walk('market')} openSettings={() => open({ hit: 'settings' })} initial={panel.sub as 'board' | undefined} />
     case 'build':
       return <BuildPanel id={panel.sub as BuildingId} onClose={onClose} openLesson={openLesson} onBuilt={() => walk(panel.sub as BuildingId)} />
     case 'tree':

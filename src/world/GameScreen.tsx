@@ -16,6 +16,7 @@ import { FxLayer, fxConfetti } from './fx'
 import { installAudioUnlock, setAudio, sfx } from './audio'
 import { useApp } from '@/store/app'
 import { BUILD_MAP } from './map'
+import { useCompany } from './companyStore'
 
 installAudioUnlock()
 
@@ -93,6 +94,21 @@ export function GameScreen() {
     const interest = settle()
     if (interest > 0) toast(`대출 이자 ${interest.toLocaleString()}원이 나갔어요`, 'info')
   }, [settle, created])
+  // 공장 직원: 월급 정산 + 자동 작업 (몇 초마다)
+  useEffect(() => {
+    if (!created) return
+    const run = () => {
+      if (useWorld.getState().buildings.factory !== 0) return
+      const c = useCompany.getState()
+      const paid = c.settleDay()
+      if (paid > 0) toast(`💼 직원 월급 ${paid.toLocaleString()}원을 지급했어요`, 'info')
+      const acts = c.tick()
+      if (acts.length) toast(acts[acts.length - 1], 'info')
+    }
+    run()
+    const t = window.setInterval(run, 6000)
+    return () => window.clearInterval(t)
+  }, [created])
 
   const onArrive = useCallback((hit: HitId) => {
     if (!hit.startsWith('plot:') && !hit.startsWith('rival:') && !hit.startsWith('npc:')) useWorld.getState().visit(hit)

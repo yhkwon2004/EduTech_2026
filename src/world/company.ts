@@ -392,14 +392,15 @@ export function researchState(r: ResearchDef, c: { xp: number; done: string[]; a
 }
 
 /** 오늘의 납품 주문 (날짜·채널·열린 제품으로 정해져요) */
-export function ordersFor(date: string, done: string[], level: number): Order[] {
+export function ordersFor(date: string, done: string[], level: number, staff?: { marketing?: number }): Order[] {
   const products = unlockedProducts(done)
   const out: Order[] = []
+  const extra = Math.min(3, staff?.marketing ?? 0)
   for (const ch of openChannels(done, level)) {
     const def = CHANNEL_MAP[ch]
     if (!def.orders) continue
     const r = rng(hash(`orders:${date}:${ch}:${level}`))
-    for (let k = 0; k < def.orders; k++) {
+    for (let k = 0; k < def.orders + extra; k++) {
       const p = products[Math.floor(r() * products.length)]
       const qty = Math.round((def.qty[0] + r() * (def.qty[1] - def.qty[0])) / 2) * 2
       const unit = Math.round((unitPrice(p, done, ch) * (0.95 + r() * 0.15)) / 10) * 10
@@ -407,4 +408,186 @@ export function ordersFor(date: string, done: string[], level: number): Order[] 
     }
   }
   return out
+}
+
+/* ───────── 직원 (부서) ───────── */
+export type DeptId = 'production' | 'rnd' | 'sales' | 'marketing' | 'finance'
+export interface DeptDef {
+  id: DeptId
+  name: string
+  emoji: string
+  /** 부서장 이름·역할 (AI 경영진) */
+  head: string
+  title: string
+  /** 1명당 하루 월급 */
+  salary: number
+  /** 직원 효과 설명 */
+  perk: string
+  max: number
+}
+export const DEPTS: DeptDef[] = [
+  { id: 'production', name: '생산팀', emoji: '⚙️', head: '강민호', title: '생산팀장', salary: 6000, perk: '1명: 끝난 라인 자동 꺼내기 · 2명+: 같은 제품 자동 재가동 · 1명당 속도 +5%', max: 3 },
+  { id: 'rnd', name: '제품개발팀', emoji: '🔬', head: '서윤아', title: '제품개발팀장', salary: 8000, perk: '1명당 연구 속도 +15%', max: 3 },
+  { id: 'sales', name: '영업팀', emoji: '🚚', head: '박태현', title: '영업팀장', salary: 7000, perk: '1명당 납품 단가 +5% · 2명+: 재고 있으면 주문 자동 납품', max: 3 },
+  { id: 'marketing', name: '마케팅팀', emoji: '📣', head: '이수진', title: '마케팅팀장', salary: 7000, perk: '1명당 직판 가격 +4% · 채널마다 주문 +1', max: 3 },
+  { id: 'finance', name: '재무팀', emoji: '💼', head: '정우성', title: '재무팀장', salary: 7000, perk: '1명당 월급 총액 -10% · 연구·증설 비용 -5%', max: 3 },
+]
+export const DEPT_MAP = Object.fromEntries(DEPTS.map((d) => [d.id, d])) as Record<DeptId, DeptDef>
+export type Staff = Record<DeptId, number>
+export const NO_STAFF: Staff = { production: 0, rnd: 0, sales: 0, marketing: 0, finance: 0 }
+
+export function staffCount(staff: Staff) {
+  return Object.values(staff).reduce((a, b) => a + b, 0)
+}
+/** 하루 월급 총액 (재무팀 할인 반영) */
+export function dailySalary(staff: Staff) {
+  const base = DEPTS.reduce((n, d) => n + d.salary * (staff[d.id] ?? 0), 0)
+  return Math.round(base * Math.max(0.5, 1 - 0.1 * (staff.finance ?? 0)))
+}
+export function costMul(staff: Staff) {
+  return Math.max(0.7, 1 - 0.05 * (staff.finance ?? 0))
+}
+export function staffSpeed(staff: Staff) {
+  return 1 + 0.05 * (staff.production ?? 0)
+}
+export function researchSpeed(staff: Staff) {
+  return 1 + 0.15 * (staff.rnd ?? 0)
+}
+export function salesMul(staff: Staff) {
+  return 1 + 0.05 * (staff.sales ?? 0)
+}
+export function marketingMul(staff: Staff) {
+  return 1 + 0.04 * (staff.marketing ?? 0)
+}
+
+/* ───────── 품질 등급 ───────── */
+/** ★1~3: 품질 관리·포장·HACCP 연구 + 제품개발팀 */
+export function qualityStars(done: string[], staff: Staff = NO_STAFF) {
+  let q = 1
+  if (done.includes('quality1')) q++
+  if (done.includes('quality2') || done.includes('package')) q++
+  if ((staff.rnd ?? 0) >= 2 && !done.includes('quality2')) q = Math.min(3, q + 1)
+  return Math.min(3, q)
+}
+export const CHANNEL_MIN_QUALITY: Record<ChannelId, number> = { direct: 1, cvs: 1, mart: 2, online: 2, export: 3 }
+
+/* ───────── 시즌 이벤트 주문 ───────── */
+export interface SeasonEvent {
+  id: string
+  name: string
+  emoji: string
+  desc: string
+  /** 추천 제품 */
+  products: string[]
+  mul: number
+  qty: [number, number]
+  /** 월/일 범위 (양 끝 포함) */
+  from: [number, number]
+  to: [number, number]
+  minQuality: number
+}
+export const EVENTS: SeasonEvent[] = [
+  {
+    id: 'newyear',
+    name: '설날 선물세트',
+    emoji: '🧧',
+    desc: '명절 선물세트 대량 주문',
+    products: ['cookie', 'jam', 'kimchi', 'lunchbox'],
+    mul: 2.2,
+    qty: [40, 120],
+    from: [1, 15],
+    to: [2, 20],
+    minQuality: 2,
+  },
+  {
+    id: 'spring',
+    name: '봄 소풍 시즌',
+    emoji: '🌸',
+    desc: '나들이 도시락·간식 수요',
+    products: ['onigiri', 'lunchbox', 'juice', 'chips'],
+    mul: 1.8,
+    qty: [40, 100],
+    from: [4, 1],
+    to: [5, 10],
+    minQuality: 1,
+  },
+  {
+    id: 'summer',
+    name: '여름 휴가 시즌',
+    emoji: '🏖️',
+    desc: '시원한 음료·간편식',
+    products: ['juice', 'coffee', 'chips', 'onigiri'],
+    mul: 1.8,
+    qty: [60, 140],
+    from: [7, 15],
+    to: [8, 20],
+    minQuality: 1,
+  },
+  {
+    id: 'chuseok',
+    name: '추석 선물세트',
+    emoji: '🌕',
+    desc: '한가위 선물세트 대량 주문',
+    products: ['cookie', 'jam', 'kimchi', 'cake'],
+    mul: 2.2,
+    qty: [40, 120],
+    from: [9, 10],
+    to: [10, 10],
+    minQuality: 2,
+  },
+  {
+    id: 'pepero',
+    name: '11월 11일 과자 데이',
+    emoji: '🍫',
+    desc: '과자·디저트 주문 폭주',
+    products: ['cookie', 'cake', 'ricecake', 'chips'],
+    mul: 2.0,
+    qty: [40, 100],
+    from: [11, 5],
+    to: [11, 12],
+    minQuality: 1,
+  },
+  {
+    id: 'exam',
+    name: '수능 응원 세트',
+    emoji: '🍡',
+    desc: '찹쌀떡·간식 응원 선물',
+    products: ['ricecake', 'cookie', 'coffee', 'onigiri'],
+    mul: 1.9,
+    qty: [40, 100],
+    from: [11, 13],
+    to: [11, 20],
+    minQuality: 1,
+  },
+  {
+    id: 'xmas',
+    name: '크리스마스 파티',
+    emoji: '🎄',
+    desc: '케이크·쿠키·파티 음식',
+    products: ['cake', 'cookie', 'juice', 'cutlet'],
+    mul: 2.2,
+    qty: [40, 120],
+    from: [12, 10],
+    to: [12, 25],
+    minQuality: 2,
+  },
+]
+export function eventFor(date: string): SeasonEvent | null {
+  const m = Number(date.slice(5, 7))
+  const d = Number(date.slice(8, 10))
+  const v = m * 100 + d
+  return EVENTS.find((e) => v >= e.from[0] * 100 + e.from[1] && v <= e.to[0] * 100 + e.to[1]) ?? null
+}
+/** 이벤트 주문 (날짜별 1개, 열린 제품 중에서) */
+export function eventOrder(date: string, done: string[]): (Order & { event: SeasonEvent }) | null {
+  const ev = eventFor(date)
+  if (!ev) return null
+  const open = unlockedProducts(done).map((p) => p.id)
+  const cands = ev.products.filter((p) => open.includes(p))
+  if (!cands.length) return null
+  const r = rng(hash(`event:${date}:${ev.id}`))
+  const p = PRODUCT_MAP[cands[Math.floor(r() * cands.length)]]
+  const qty = Math.round((ev.qty[0] + r() * (ev.qty[1] - ev.qty[0])) / 2) * 2
+  const unit = Math.round((p.price * priceMul(done) * ev.mul) / 10) * 10
+  return { id: `${date}:event:${ev.id}`, channel: 'direct', productId: p.id, qty, unit, xp: Math.round((qty * unit) / 100), event: ev }
 }

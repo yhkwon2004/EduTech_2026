@@ -13,6 +13,7 @@ import { CROPS, itemInfo } from '../items'
 import { RIVAL_PLACEHOLDER } from '../map'
 import { Bar, Card, Chip, cx, GameButton, Panel, Tabs, toast, won } from '../ui/kit'
 import { setAudio, sfx } from '../audio'
+import { DEFAULT_MODEL, MODELS } from '../ai'
 
 /* ───────── 이웃 가게 (경쟁 상대 관찰) ───────── */
 const COUNTER: Record<Personality, { watch: string; counter: string }> = {
@@ -225,6 +226,7 @@ export function SettingsPanel({ onClose, onCharacter }: { onClose: () => void; o
   const app = useApp()
   const [name, setName] = useState(w.name)
   const [confirm, setConfirm] = useState(false)
+  const [aiKey, setAiKey] = useState(app.settings.aiKey ?? '')
   return (
     <Panel title="설정" icon="⚙️" color="#4B4F7A" wide onClose={onClose}>
       <div className="grid gap-3 md:grid-cols-[auto_1fr]">
@@ -290,6 +292,42 @@ export function SettingsPanel({ onClose, onCharacter }: { onClose: () => void; o
               })}
             </div>
             <p className="mt-1 text-[0.625rem] font-semibold text-mute">잔잔한 오르골 음악 · 낮엔 새소리, 밤엔 풀벌레 소리가 들려요.</p>
+          </Card>
+          <Card className="sm:col-span-2">
+            <p className="text-[0.8125rem] font-black">🤖 AI 경영진 연결 (내 Anthropic 계정)</p>
+            <p className="mt-0.5 text-[0.6875rem] font-semibold text-sub">
+              API 키를 넣으면 식품 공장의 생산·개발·영업·마케팅·재무 팀장이 Claude로 조언하고, CEO의 요청대로 게임 속 행동을 실행해요. 키는 이 기기에만 저장되고 Anthropic으로만 보내요 (사용량은 내
+              계정에 과금).
+            </p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <input
+                type="password"
+                value={aiKey}
+                onChange={(e) => setAiKey(e.target.value)}
+                placeholder="sk-ant-…"
+                autoComplete="off"
+                className="h-9 min-w-[12rem] flex-1 rounded-xl border-2 border-black/10 bg-white px-2 text-[0.8125rem] font-bold outline-none focus:border-primary"
+              />
+              <select
+                value={app.settings.aiModel ?? DEFAULT_MODEL}
+                onChange={(e) => app.updateSettings({ aiModel: e.target.value })}
+                className="h-9 rounded-xl border-2 border-black/10 bg-white px-2 text-[0.75rem] font-black outline-none"
+              >
+                {MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+              <GameButton
+                size="sm"
+                disabled={aiKey === (app.settings.aiKey ?? '')}
+                onClick={() => (app.updateSettings({ aiKey: aiKey.trim() }), toast(aiKey.trim() ? '🤖 AI 경영진을 연결했어요' : 'AI 연결을 해제했어요'))}
+              >
+                {aiKey.trim() ? '저장' : '해제'}
+              </GameButton>
+            </div>
+            <p className="mt-1 text-[0.625rem] font-semibold text-mute">{app.settings.aiKey ? '✅ 연결됨 · 공장 → 👔 경영진 탭에서 회의해요' : '키가 없어도 팀장들의 기본 조언은 볼 수 있어요'}</p>
           </Card>
           <Card>
             <label className="flex items-center justify-between gap-2">

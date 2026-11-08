@@ -31,19 +31,22 @@ import { fxAt, fxConfetti } from '../fx'
 import { emote } from '../emote'
 import { Bar, Card, Chip, cx, GameButton, Panel, Tabs, mmss, toast, won } from '../ui/kit'
 import { useNow } from './FarmPanel'
+import { BoardroomTab, StaffTab } from './Boardroom'
+import { CHANNEL_MIN_QUALITY, qualityStars, salesMul, marketingMul } from '../company'
+import { openEvent } from '../companyStore'
 
-type Tab = 'produce' | 'research' | 'expand' | 'sell' | 'company'
+type Tab = 'produce' | 'research' | 'expand' | 'sell' | 'staff' | 'board' | 'company'
 
 function LevelBadge() {
   const xp = useCompany((s) => s.xp)
   const lv = companyLevel(xp)
   return (
-    <span className="flex items-center gap-1.5 rounded-full bg-black/20 px-2 py-0.5 text-[0.6875rem] font-black text-white">
+    <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-black/20 px-2 py-0.5 text-[0.6875rem] font-black text-white" title={`${xp}/${lv.next} XP`}>
       <span className="rounded-full bg-[#FFE27A] px-1.5 text-ink">Lv.{lv.level}</span>
-      <span className="h-1.5 w-16 overflow-hidden rounded-full bg-white/25">
+      <span className="h-1.5 w-12 overflow-hidden rounded-full bg-white/25">
         <span className="block h-full rounded-full bg-[#FFE27A] transition-[width] duration-700" style={{ width: `${lv.progress * 100}%` }} />
       </span>
-      <span className="tabular-nums">
+      <span className="hidden tabular-nums lg:inline">
         {xp}/{lv.next} XP
       </span>
     </span>
@@ -404,6 +407,8 @@ function SellTab() {
     fxAt(el, { float: `+${cash.toLocaleString()}원`, color: '#FFE27A' })
   }
   const stockIds = Object.keys(c.stock).filter((id) => c.stock[id] > 0)
+  const q = qualityStars(c.done, c.staff)
+  const ev = openEvent(c, date)
   void now
   return (
     <div className="grid h-full gap-3 md:grid-cols-[1fr_15rem]">
@@ -425,6 +430,26 @@ function SellTab() {
           })}
         </div>
         <div className="thin-scroll min-h-0 flex-1 space-y-1.5 overflow-y-auto">
+          {ev && (
+            <div
+              ref={(el) => void (refs.current[ev.id] = el)}
+              className="shine-sweep relative flex items-center gap-2 rounded-2xl border-2 border-[#E8B93A] bg-gradient-to-r from-[#FFF3C4] to-[#FFE08A] p-2"
+            >
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-[1.375rem]">{ev.event.emoji}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[0.6875rem] font-black text-[#7A5600]">시즌 이벤트 · {ev.event.name}</span>
+                <span className="block text-[0.8125rem] font-black">
+                  {PRODUCT_MAP[ev.productId].emoji} {PRODUCT_MAP[ev.productId].name} {ev.qty}개 × {ev.unit.toLocaleString()}원 = {(ev.qty * ev.unit).toLocaleString()}원
+                </span>
+                <span className={cx('block text-[0.625rem] font-black', q >= ev.event.minQuality ? 'text-teal' : 'text-coral')}>
+                  품질 {'★'.repeat(ev.event.minQuality)} 필요 (지금 {'★'.repeat(q)}) · 재고 {c.stock[ev.productId] ?? 0}/{ev.qty} · 동네 평판 +
+                </span>
+              </span>
+              <GameButton size="sm" tone="sun" disabled={q < ev.event.minQuality || (c.stock[ev.productId] ?? 0) < ev.qty} onClick={() => fulfill(ev.id)}>
+                🎁 납품
+              </GameButton>
+            </div>
+          )}
           {orders.length === 0 && (
             <div className="grid h-full place-items-center text-center text-[0.8125rem] font-bold text-sub">
               <p>
@@ -438,7 +463,8 @@ function SellTab() {
             const p = PRODUCT_MAP[o.productId]
             const ch = CHANNEL_MAP[o.channel]
             const have = c.stock[o.productId] ?? 0
-            const ok = have >= o.qty
+            const needQ = CHANNEL_MIN_QUALITY[o.channel]
+            const ok = have >= o.qty && q >= needQ
             return (
               <div key={o.id} ref={(el) => void (refs.current[o.id] = el)} className="flex items-center gap-2 rounded-2xl border-2 border-black/5 bg-white p-2 shadow-sm">
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#FFF4D6] text-[1.375rem]">{p.emoji}</span>
@@ -451,6 +477,8 @@ function SellTab() {
                   </span>
                   <span className={cx('block text-[0.625rem] font-black', ok ? 'text-teal' : 'text-coral')}>
                     재고 {have}/{o.qty}
+                    {q < needQ ? ` · 품질 ${'★'.repeat(needQ)} 필요` : q > needQ ? ' · 품질 보너스 +10%' : ''}
+                    {salesMul(c.staff) > 1 ? ` · 영업팀 ×${salesMul(c.staff).toFixed(2)}` : ''}
                   </span>
                 </span>
                 <GameButton size="sm" tone={ok ? 'green' : 'white'} disabled={!ok} onClick={() => fulfill(o.id)}>
@@ -462,7 +490,9 @@ function SellTab() {
         </div>
       </div>
       <div className="flex min-h-0 flex-col gap-1.5">
-        <p className="text-[0.75rem] font-black">🏪 직판 (기준가 ×1.0)</p>
+        <p className="text-[0.75rem] font-black">
+          🏪 직판 (×{marketingMul(c.staff).toFixed(2)}) · 품질 {'★'.repeat(q)}
+        </p>
         {stockIds.length === 0 && <p className="text-[0.6875rem] font-semibold text-sub">완제품 재고가 없어요. 생산 탭에서 만들어요.</p>}
         <div className="thin-scroll min-h-0 flex-1 space-y-1 overflow-y-auto">
           {stockIds.map((id) => {
@@ -558,15 +588,16 @@ function CompanyTab() {
   )
 }
 
-export function FactoryPanel({ onClose, goMarket }: { onClose: () => void; goMarket: () => void }) {
+export function FactoryPanel({ onClose, goMarket, openSettings, initial }: { onClose: () => void; goMarket: () => void; openSettings: () => void; initial?: Tab }) {
   const name = useCompany((s) => s.name)
   const setName = useCompany((s) => s.setName)
   const me = useWorld((s) => s.name)
   const jobs = useCompany((s) => s.jobs)
   const active = useCompany((s) => s.active)
   const orders = useCompany((s) => openOrders(s).length)
+  const evId = useCompany((s) => openEvent(s)?.id ?? null)
   const now = useNow(1000)
-  const [tab, setTab] = useState<Tab>('produce')
+  const [tab, setTab] = useState<Tab>(initial ?? 'produce')
   useEffect(() => {
     if (!name) setName(`${me || '골목'} 푸드`)
   }, [name, me, setName])
@@ -591,7 +622,9 @@ export function FactoryPanel({ onClose, goMarket }: { onClose: () => void; goMar
               { id: 'produce', label: '⚙️ 생산', badge: readyLines },
               { id: 'research', label: '🔬 연구개발', badge: readyResearch },
               { id: 'expand', label: '🏗️ 증설' },
-              { id: 'sell', label: '🚚 납품', badge: orders },
+              { id: 'sell', label: '🚚 납품', badge: orders + (evId ? 1 : 0) },
+              { id: 'staff', label: '🧑‍💼 직원' },
+              { id: 'board', label: '👔 경영진' },
               { id: 'company', label: '🏢 회사' },
             ]}
           />
@@ -603,6 +636,8 @@ export function FactoryPanel({ onClose, goMarket }: { onClose: () => void; goMar
       {tab === 'research' && <ResearchTab />}
       {tab === 'expand' && <ExpandTab />}
       {tab === 'sell' && <SellTab />}
+      {tab === 'staff' && <StaffTab />}
+      {tab === 'board' && <BoardroomTab openSettings={openSettings} />}
       {tab === 'company' && <CompanyTab />}
     </Panel>
   )

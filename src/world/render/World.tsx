@@ -200,6 +200,25 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
   const npcEls = useRef<(SVGGElement | null)[]>([])
   const [npcViews, setNpcViews] = useState<CharView[]>([])
   const [quizNpc, setQuizNpc] = useState<number | null>(null)
+  // 납품 트럭: 공장 하역장 → 큰길 → 마을 밖
+  type Truck = { x: number; y: number; path: { x: number; y: number }[]; yaw: number; target: number; walking: boolean; emoji: string }
+  const trucks = useRef<Truck[]>([])
+  const truckEls = useRef<(SVGGElement | null)[]>([])
+  const [truckN, setTruckN] = useState(0)
+  useEffect(
+    () =>
+      useCompany.subscribe((st, prev) => {
+        if (st.fulfilled.length <= prev.fulfilled.length) return
+        const last = st.fulfilled[st.fulfilled.length - 1]
+        const dest = last.includes(':export') ? { x: 12, y: 19 } : last.includes(':event') ? { x: 12, y: 9 } : { x: 12, y: 0 }
+        const start = { x: 23, y: 19 }
+        const path = findPath(start, dest)
+        if (!path.length) return
+        trucks.current.push({ x: start.x, y: start.y, path, yaw: 0, target: 0, walking: true, emoji: last.includes(':event') ? '🎁' : '📦' })
+        setTruckN((n) => n + 1)
+      }),
+    [],
+  )
   const nextQuizAt = useRef(performance.now() + 14000)
   const npcViewsRef = useRef(npcViews)
   const doors = useMemo(() => [...RIVAL_LOTS.map((r) => r.door), BUILDING_MAP.shop.door, BUILDING_MAP.market.door, BUILDING_MAP.academy.door], [])
@@ -475,6 +494,27 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
             n.target = n.yaw >= 0 ? 25 : -25
             startAct(n, 'wave', t, 'happy')
             setQuizNpc(i)
+          }
+        }
+        // 납품 트럭
+        if (trucks.current.length) {
+          let removed = false
+          trucks.current.forEach((tr, i) => {
+            const moving = step(tr as unknown as Walker, dt * 1.6)
+            turn(tr as unknown as Walker, dt, 900)
+            const el = truckEls.current[i]
+            if (el) {
+              const f = footOf(tr)
+              el.setAttribute('transform', `translate(${f.x},${f.y})`)
+              const flip = normDeg(tr.yaw) < 0
+              const body = el.firstElementChild as SVGGElement | null
+              if (body) body.setAttribute('transform', `scale(${flip ? -1 : 1},1)`)
+            }
+            if (!moving) removed = true
+          })
+          if (removed) {
+            trucks.current = trucks.current.filter((tr) => tr.path.length)
+            setTruckN((n) => n + 1)
           }
         }
         // 카메라 따라가기
@@ -859,6 +899,29 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
           speed={0.72}
           quiz={quizNpc === i && !t.hidden ? `npc:${i}` : undefined}
         />
+      ),
+    })
+  })
+  // 납품 트럭
+  trucks.current.forEach((tr, i) => {
+    items.push({
+      depth: tr.x + tr.y + 0.6,
+      el: (
+        <g key={`truck${i}-${truckN}`} ref={(el) => void (truckEls.current[i] = el)} style={{ pointerEvents: 'none' }}>
+          <g>
+            <ellipse cx={0} cy={2} rx={20} ry={7} fill="#16240C" opacity={0.22} />
+            <rect x={-20} y={-24} width={26} height={20} rx={3} fill="#F4F6FA" stroke="#2E3B8A" strokeWidth={1.4} />
+            <rect x={-20} y={-24} width={26} height={6} fill="#5B6BBF" />
+            <text x={-7} y={-9} textAnchor="middle" fontSize={9}>
+              {tr.emoji}
+            </text>
+            <path d="M6 -16 h9 l5 7 v9 h-14 z" fill="#5B6BBF" stroke="#2E3B8A" strokeWidth={1.4} strokeLinejoin="round" />
+            <path d="M8 -14 h6 l3.5 5 h-9.5 z" fill="#CFE9FF" />
+            <circle cx={-12} cy={1} r={3.6} fill="#2A2238" stroke="#9AA4B0" strokeWidth={1.2} />
+            <circle cx={11} cy={1} r={3.6} fill="#2A2238" stroke="#9AA4B0" strokeWidth={1.2} />
+            <circle cx={19} cy={-6} r={1.4} fill="#FFE27A" />
+          </g>
+        </g>
       ),
     })
   })
