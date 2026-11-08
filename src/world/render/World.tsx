@@ -3,6 +3,7 @@ import { BUILDINGS, BUILDING_MAP, BUILD_MAP, DECOS, PLOTS, RIVAL_LOTS, RIVAL_PLA
 import { useWorld, levelOf } from '../store'
 import { useGame, canPlayToday } from '@/game/store'
 import { useScreen } from '../screen'
+import { useShallow } from 'zustand/react/shallow'
 import { GroundLayer } from './Ground'
 import { AcademyArt, BoardArt, CompanyArt, MarketArt, NightCtx, RivalArt, ShopArt, SupportArt, WorkshopArt } from './Buildings'
 import { sfx } from '../audio'
@@ -122,6 +123,14 @@ const NIGHT_LIGHTS = (() => {
   return out
 })()
 const NPC_COUNT = 7
+/** 구역 이름 (축소했을 때) */
+const ZONES = [
+  { label: '⛲ 광장', x: 12.5, y: 9.5, z: 40 },
+  { label: '🏘️ 상가 거리', x: 5, y: 6.5, z: 110 },
+  { label: '🌾 텃밭', x: 18.5, y: 12.5, z: 30 },
+  { label: '🏭 공장 지대', x: 21.5, y: 17.5, z: 120 },
+  { label: '🏖️ 바닷가', x: 3, y: 16, z: 20 },
+]
 
 function doorOf(hit: HitId): { x: number; y: number } | null {
   if (hit.startsWith('rival:')) {
@@ -151,8 +160,24 @@ function footOf(w: { x: number; y: number }) {
 
 export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; target?: BuildingId | 'farm' | null; paused?: boolean }>(function World({ onArrive, target, paused }, ref) {
   const screen = useScreen()
-  const world = useWorld()
+  const world = useWorld(
+    useShallow((s) => ({
+      avatar: s.avatar,
+      path: s.path,
+      exp: s.exp,
+      pos: s.pos,
+      plots: s.plots,
+      crafting: s.crafting,
+      job: s.job,
+      fast: s.fast,
+      buildings: s.buildings,
+      name: s.name,
+      cash: s.cash,
+      counters: s.counters,
+    })),
+  )
   const game = useGame()
+  const lowFx = useApp((s) => !!s.settings.lowFx)
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000)
@@ -926,7 +951,7 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     })
   })
   // 낮엔 꽃밭 위 나비
-  if (!night)
+  if (!night && !lowFx)
     BUTTERFLY_SPOTS.forEach((d, i) => {
       const c = iso(d.x + 0.5, d.y + 0.5)
       items.push({
@@ -946,6 +971,21 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
     })
   items.sort((a, b) => a.depth - b.depth)
 
+  // 멀리서 보면 구역 이름이 떠요
+  if (baseZoom * zoomLevel < 0.95)
+    for (const z of ZONES) {
+      const p = iso(z.x, z.y, z.z)
+      const wpx = z.label.length * 12 + 26
+      markers.push(
+        <g key={`zone-${z.label}`} transform={`translate(${p.x},${p.y})`} style={{ pointerEvents: 'none' }} opacity={0.92}>
+          <rect x={-wpx / 2} y={-14} width={wpx} height={28} rx={14} fill="#1A1236" opacity={0.55} />
+          <rect x={-wpx / 2} y={-14} width={wpx} height={28} rx={14} fill="none" stroke="#FFFFFF" strokeOpacity={0.6} strokeWidth={1.5} />
+          <text y={5.5} textAnchor="middle" fontSize={14} fontWeight={900} fill="#FFFFFF" fontFamily="Pretendard Variable, Pretendard, sans-serif">
+            {z.label}
+          </text>
+        </g>,
+      )
+    }
   if (craftReady) markAt('m-craft', 19, 7, 102, '완성!', '#22A090')
   if (world.buildings.factory === 0 && (factoryJobs.some((j) => j && j.readyAt <= now) || Object.values(companyActive).some((at) => at <= now)))
     markAt('m-factory', 21.5, 17.5, 110, '완료!', '#5B6BBF')

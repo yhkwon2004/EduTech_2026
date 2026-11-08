@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { emote } from './emote'
 import { World, type WorldHandle } from './render/World'
 import { HUD } from './ui/HUD'
-import { Toasts, toast } from './ui/kit'
+import { GameButton, Toasts, toast } from './ui/kit'
 import { useWorld, levelOf } from './store'
 import { useGame } from '@/game/store'
 import { useStory } from './hooks'
@@ -19,6 +19,38 @@ import { BUILD_MAP } from './map'
 import { useCompany } from './companyStore'
 
 installAudioUnlock()
+
+/** 처음 마을에 들어오면 보여 주는 조작 도움말 */
+function HelpOverlay({ onDone }: { onDone: () => void }) {
+  const tips = [
+    ['👆', '건물을 누르면 걸어가서 들어가요'],
+    ['🧭', '아래 바로가기 바로 지은 건물에 바로 가요'],
+    ['🤏', '두 손가락 · 휠 · +/- 로 확대/축소, 끌어서 이동'],
+    ['📜', '왼쪽 아래 이야기 퀘스트의 "가기"를 따라가면 돼요'],
+    ['🏫', '배움터에서 3분 스테이지를 깨면 건물을 지을 수 있어요'],
+    ['❓', '마을 사람 머리 위 ❓는 OX 퀴즈예요'],
+  ]
+  return (
+    <div className="absolute inset-0 z-[45] grid place-items-center bg-[#101233]/55 p-3 backdrop-blur-[2px]" onClick={onDone}>
+      <div className="w-full max-w-[34rem] animate-pop rounded-[1.5rem] border-[3px] border-[#1B1D45]/80 bg-[#FFFDF7] p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <p className="text-[1rem] font-black">🗺️ 이렇게 놀아요</p>
+        <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
+          {tips.map(([e, t]) => (
+            <li key={t} className="flex items-center gap-2 rounded-xl bg-black/5 px-2.5 py-1.5 text-[0.8125rem] font-bold">
+              <span className="text-[1.25rem]">{e}</span>
+              {t}
+            </li>
+          ))}
+        </ul>
+        <div className="mt-3 flex justify-end">
+          <GameButton tone="sun" onClick={onDone}>
+            시작할게요!
+          </GameButton>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function isNight() {
   const h = new Date().getHours()
@@ -85,6 +117,8 @@ export function GameScreen() {
   const created = useWorld((s) => s.created)
   const story = useStory()
   const settle = useWorld((s) => s.settleInterest)
+  const helpSeen = useApp((s) => !!s.settings.helpSeen)
+  const lowFx = useApp((s) => !!s.settings.lowFx)
   const bgmOn = useApp((s) => s.settings.bgm !== false)
   const sfxOn = useApp((s) => s.settings.sfx !== false)
   useEffect(() => setAudio({ bgm: bgmOn, sfx: sfxOn }), [bgmOn, sfxOn])
@@ -175,7 +209,7 @@ export function GameScreen() {
   return (
     <>
       <World ref={worldRef} onArrive={onArrive} target={created && story.current && !story.done ? (story.current.target as BuildingId | 'farm') : null} paused={!!panel || !created || !!running} />
-      <Atmosphere night={isNight()} />
+      <Atmosphere night={isNight()} low={lowFx} />
       <DayTint />
       {created ? (
         <>
@@ -186,12 +220,17 @@ export function GameScreen() {
                 setPanel({ hit: m })
               }}
               onGo={() => story.current && goTarget(story.current.target)}
+              onGoTo={(t) => {
+                sfx('tap')
+                goTarget(t)
+              }}
               onClaimStory={claimStory}
               onZoom={(d) => worldRef.current?.zoom(d)}
               onRecenter={() => worldRef.current?.recenter()}
             />
           )}
           {running && <RunOverlay result={running} onDone={finishRun} />}
+          {!helpSeen && !panel && !running && <HelpOverlay onDone={() => useApp.getState().updateSettings({ helpSeen: true })} />}
           {panel && <PanelRouter panel={panel} onClose={() => setPanel(null)} open={setPanel} world={worldRef} onRunDay={runDay} goTarget={goTarget} />}
         </>
       ) : (

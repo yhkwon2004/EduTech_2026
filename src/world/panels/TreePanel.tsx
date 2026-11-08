@@ -106,7 +106,7 @@ export function TreePanel({ onClose, goAcademy, openLesson }: { onClose: () => v
                   <p className="text-[0.9375rem] font-black leading-tight">
                     {e === '⭐' ? <StarIcon on size={13} className="-mt-0.5 mr-0.5 inline" /> : e} {v}
                   </p>
-                  <p className="text-[0.5625rem] font-bold text-sub">{l}</p>
+                  <p className="text-[0.625rem] font-bold text-sub">{l}</p>
                 </div>
               ))}
             </div>
@@ -118,8 +118,8 @@ export function TreePanel({ onClose, goAcademy, openLesson }: { onClose: () => v
                 className={cx('flex min-w-[4.6rem] flex-1 flex-col items-center rounded-xl px-1 py-1.5 text-center', k <= t.index ? 'bg-teal-50 ring-2 ring-teal/30' : 'bg-black/5 opacity-60')}
               >
                 <span className={cx('text-[1.25rem] leading-none', k > t.index && 'grayscale')}>{st.emoji}</span>
-                <span className="mt-0.5 text-[0.5625rem] font-black leading-tight">{st.name}</span>
-                <span className="text-[0.5rem] font-bold text-sub">레슨 {st.need}</span>
+                <span className="mt-0.5 text-[0.625rem] font-black leading-tight">{st.name}</span>
+                <span className="text-[0.625rem] font-bold text-sub">레슨 {st.need}</span>
               </div>
             ))}
           </div>

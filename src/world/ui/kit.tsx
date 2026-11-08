@@ -35,7 +35,7 @@ export function GameButton({
   size?: 'sm' | 'md' | 'lg'
   type?: 'button' | 'submit'
 }) {
-  const sz = size === 'sm' ? 'h-8 px-3 text-[0.75rem] rounded-xl' : size === 'lg' ? 'h-12 px-6 text-[1rem] rounded-2xl' : 'h-10 px-4 text-[0.875rem] rounded-2xl'
+  const sz = size === 'sm' ? 'h-9 px-3 text-[0.75rem] rounded-xl' : size === 'lg' ? 'h-12 px-6 text-[1rem] rounded-2xl' : 'h-10 px-4 text-[0.875rem] rounded-2xl'
   return (
     <button
       type={type}

@@ -2,9 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { fxAt } from '../fx'
 import { sfx } from '../audio'
 import { toLook } from '../avatar'
-import { Backpack, Crown, Footprints, Gift, LocateFixed, Minus, Plus, ScrollText, Settings, Zap } from 'lucide-react'
+import { Backpack, ChevronDown, ChevronUp, Crown, Footprints, Gift, LocateFixed, Minus, Plus, ScrollText, Settings, Zap } from 'lucide-react'
+import { BUILDINGS, type BuildingId } from '../map'
+import { useCompany } from '../companyStore'
 import { useWorld, energyNow, levelOf, maxEnergy } from '../store'
-import { useGame } from '@/game/store'
+import { useGame, canPlayToday } from '@/game/store'
 import { useDaily, useStory } from '../hooks'
 import { CharacterArt } from '../render/Character'
 import { JOB_MAP, RANKS } from '../jobs'
@@ -70,19 +72,70 @@ function useGainFx(value: number, el: React.RefObject<HTMLElement | null>, fmt: 
   return bump
 }
 
+const NAV_ICON: Record<BuildingId, string> = { shop: '🏪', workshop: '🍳', market: '🛒', academy: '🏫', company: '🏢', support: '🏛️', board: '📋', tree: '🌳', factory: '🏭' }
+const NAV_ORDER: (BuildingId | 'farm')[] = ['shop', 'workshop', 'market', 'farm', 'academy', 'tree', 'factory', 'company', 'support', 'board']
+
+/** 아래 가운데: 바로가기 (지은 건물만) */
+function QuickNav({ onGo, now, left }: { onGo: (t: BuildingId | 'farm') => void; now: number; left: string }) {
+  const buildings = useWorld((s) => s.buildings)
+  const crafting = useWorld((s) => s.crafting)
+  const plots = useWorld((s) => s.plots)
+  const fast = useWorld((s) => s.fast)
+  const job = useWorld((s) => s.job)
+  const g = useGame()
+  const jobs = useCompany((s) => s.jobs)
+  const badge = (id: BuildingId | 'farm') => {
+    if (id === 'workshop') return crafting.some((c) => c.readyAt <= now)
+    if (id === 'farm') return Object.values(plots).some((p) => p.readyAt && p.readyAt <= now)
+    if (id === 'shop') return g.started && (canPlayToday(g) || fast)
+    if (id === 'company') return !!job && (job.lastWork !== todayKey() || fast)
+    if (id === 'factory') return jobs.some((j) => j && j.readyAt <= now)
+    return false
+  }
+  const list = NAV_ORDER.filter((id) => id === 'farm' || buildings[id] === 0)
+  return (
+    <div className="pointer-events-none absolute bottom-2 right-[9.75rem] z-30 flex justify-center transition-[left] duration-300" style={{ left }}>
+      <div className="no-scrollbar pointer-events-auto flex max-w-full gap-1 overflow-x-auto rounded-2xl border-2 border-[#1B1D45]/70 bg-white/92 p-1 shadow-lg backdrop-blur">
+        {list.map((id) => {
+          const name = id === 'farm' ? '텃밭' : BUILDINGS.find((b) => b.id === id)!.name
+          const on = badge(id)
+          return (
+            <button
+              key={id}
+              onClick={() => onGo(id)}
+              aria-label={`${name}으로 가기`}
+              title={name}
+              className={cx(
+                'relative grid size-9 shrink-0 place-items-center rounded-xl text-[1.125rem] transition active:scale-90',
+                on ? 'bg-gradient-to-b from-[#FFF09A] to-[#FFC93C] ring-2 ring-[#F2A21B]/60' : 'bg-black/5 hover:bg-black/10',
+              )}
+            >
+              {id === 'farm' ? '🌱' : NAV_ICON[id]}
+              {on && <span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full bg-coral ring-2 ring-white" />}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export function HUD({
   onMenu,
   onGo,
+  onGoTo,
   onClaimStory,
   onZoom,
   onRecenter,
 }: {
   onMenu: (m: 'bag' | 'quest' | 'rank' | 'settings' | 'character') => void
   onGo: () => void
+  onGoTo: (t: BuildingId | 'farm') => void
   onClaimStory: () => void
   onZoom: (d: number) => void
   onRecenter: () => void
 }) {
+  const [questOpen, setQuestOpen] = useState(true)
   const w = useWorld()
   const g = useGame()
   const [now, setNow] = useState(Date.now())
@@ -132,7 +185,7 @@ export function HUD({
           <p className="truncate text-[0.8125rem] font-black leading-tight">{w.name}</p>
           <p className="truncate text-[0.625rem] font-bold leading-tight text-sub">{title}</p>
           <div className="mt-1 flex items-center gap-1">
-            <span className="w-7 text-[0.5625rem] font-black text-[#B7860B]">EXP</span>
+            <span className="w-7 text-[0.625rem] font-black text-[#B7860B]">EXP</span>
             <div ref={expEl} className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/10">
               <div className="h-full rounded-full bg-gradient-to-r from-[#FFE27A] to-sun transition-[width] duration-700" style={{ width: `${lv.progress * 100}%` }} />
             </div>
@@ -142,17 +195,19 @@ export function HUD({
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/10">
               <div className="h-full rounded-full bg-coral" style={{ width: `${(en.energy / max) * 100}%` }} />
             </div>
-            <span className="text-[0.5625rem] font-black tabular-nums text-coral">
+            <span className="text-[0.625rem] font-black tabular-nums text-coral">
               {en.energy}/{max}
             </span>
           </div>
-          {en.nextIn > 0 && <p className="text-[0.5rem] font-bold text-mute">+1 체력 {mmss(en.nextIn)}</p>}
+          {en.nextIn > 0 && <p className="text-[0.625rem] font-bold text-mute">+1 체력 {mmss(en.nextIn)}</p>}
         </div>
       </button>
 
       {/* 가운데 위: 날짜·날씨 */}
       <div className="pointer-events-none absolute left-1/2 top-2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-2xl border-2 border-[#1B1D45]/70 bg-gradient-to-b from-[#FFF8E1] to-[#FCEBC2] px-3 py-1.5 shadow-lg">
-        <span className="float-soft text-[1.375rem] leading-none">{new Date(now).getHours() >= 19 || new Date(now).getHours() < 6 ? (wx.icon === '☀️' ? '🌙' : wx.icon === '⛅' ? '☁️' : wx.icon) : wx.icon}</span>
+        <span className="float-soft text-[1.375rem] leading-none">
+          {new Date(now).getHours() >= 19 || new Date(now).getHours() < 6 ? (wx.icon === '☀️' ? '🌙' : wx.icon === '⛅' ? '☁️' : wx.icon) : wx.icon}
+        </span>
         <span className="leading-tight">
           <span className="block text-[0.75rem] font-black">{formatKo(date)}</span>
           <span className="block text-[0.625rem] font-bold text-sub">
@@ -199,23 +254,42 @@ export function HUD({
             aria-label={label}
           >
             <I className="size-5 text-wood" strokeWidth={2.4} />
-            <span className="text-[0.5625rem] font-black text-wood">{label}</span>
+            <span className="text-[0.625rem] font-black text-wood">{label}</span>
             {badge > 0 && <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full border-2 border-white bg-coral text-[0.625rem] font-black text-white">{badge}</span>}
           </button>
         ))}
       </div>
 
-      {/* 왼쪽 아래: 퀘스트 안내 */}
+      {/* 아래 가운데: 바로가기 */}
+      <QuickNav onGo={onGoTo} now={now} left={story.current ? (questOpen ? '20rem' : '9rem') : '0.5rem'} />
+
+      {/* 왼쪽 아래: 퀘스트 안내 (접을 수 있어요) */}
       {story.current && (
-        <div className="pointer-events-auto absolute bottom-2 left-2 z-30 flex max-w-[24rem] items-center gap-2 rounded-2xl border-2 border-[#1B1D45]/70 bg-white/94 p-1.5 pr-2 shadow-lg backdrop-blur">
-          <span className={cx('grid size-10 shrink-0 place-items-center rounded-xl text-[1.125rem] font-black', story.done ? 'bg-teal text-white' : 'bg-sun text-ink')}>{story.done ? '✓' : '!'}</span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[0.625rem] font-black text-sub">
-              이야기 {story.index + 1}/{story.total}
+        <div
+          className={cx(
+            'pointer-events-auto absolute bottom-2 left-2 z-30 flex items-center gap-2 rounded-2xl border-2 border-[#1B1D45]/70 bg-white/94 p-1.5 pr-2 shadow-lg backdrop-blur',
+            questOpen ? 'max-w-[19rem]' : 'max-w-[8rem]',
+          )}
+        >
+          <button
+            onClick={() => setQuestOpen((v) => !v)}
+            aria-label={questOpen ? '퀘스트 접기' : '퀘스트 펼치기'}
+            className={cx('relative grid size-10 shrink-0 place-items-center rounded-xl text-[1.125rem] font-black', story.done ? 'bg-teal text-white' : 'bg-sun text-ink')}
+          >
+            {story.done ? '✓' : '!'}
+            <span className="absolute -bottom-1 -right-1 grid size-4 place-items-center rounded-full bg-white text-ink shadow">
+              {questOpen ? <ChevronDown className="size-3" strokeWidth={3} /> : <ChevronUp className="size-3" strokeWidth={3} />}
             </span>
-            <span className="block truncate text-[0.8125rem] font-black leading-tight">{story.current.title}</span>
-            <span className="block truncate text-[0.625rem] font-semibold text-sub">{story.current.hint}</span>
-          </span>
+          </button>
+          {questOpen && (
+            <span className="min-w-0 flex-1">
+              <span className="block text-[0.625rem] font-black text-sub">
+                이야기 {story.index + 1}/{story.total}
+              </span>
+              <span className="block truncate text-[0.8125rem] font-black leading-tight">{story.current.title}</span>
+              <span className="block truncate text-[0.625rem] font-semibold text-sub">{story.current.hint}</span>
+            </span>
+          )}
           {story.done ? (
             <button
               onClick={onClaimStory}
@@ -243,8 +317,8 @@ export function HUD({
         ].map(([I, fn, label], i) => {
           const Icon = I as typeof Minus
           return (
-            <button key={i} aria-label={label as string} onClick={fn as () => void} className="btn-game grid size-10 place-items-center rounded-xl border-b-[3px] border-[#1B1D45] bg-white/94">
-              <Icon className="size-5" strokeWidth={2.6} />
+            <button key={i} aria-label={label as string} onClick={fn as () => void} className="btn-game grid size-9 place-items-center rounded-xl border-b-[3px] border-[#1B1D45] bg-white/94">
+              <Icon className="size-4.5" strokeWidth={2.6} />
             </button>
           )
         })}

@@ -216,12 +216,12 @@ function OpenTab({ onRun, goWorkshop, openLesson }: { onRun: (d: DayDecision) =>
               </span>
               {p.kind === 'goods' && (
                 <span className="text-center">
-                  <span className="block text-[0.5625rem] font-black text-sub">진열</span>
+                  <span className="block text-[0.625rem] font-black text-sub">진열</span>
                   <Stepper value={plan[p.id] ?? 0} max={stock} step={5} onChange={(v) => setPlan({ ...plan, [p.id]: v })} />
                 </span>
               )}
               <span className="text-center">
-                <span className="block text-[0.5625rem] font-black text-sub">가격 (동네 {clampRef(p).toLocaleString()})</span>
+                <span className="block text-[0.625rem] font-black text-sub">가격 (동네 {clampRef(p).toLocaleString()})</span>
                 <Stepper value={price} min={100} step={p.price >= 20000 ? 1000 : 100} onChange={(v) => setPrices({ ...prices, [p.id]: v })} />
               </span>
             </Card>

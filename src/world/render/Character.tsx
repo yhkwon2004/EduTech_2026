@@ -91,10 +91,10 @@ export const CharacterNode = forwardRef<SVGGElement, NodeProps>(function Charact
       <CharacterArt {...rest} scale={scale} />
       {name && (
         <g transform={`translate(0,${-74 * scale})`}>
-          <rect x={-name.length * 5.6 - 9} y={-9} width={name.length * 11.2 + 18} height={18} rx={9} fill="#1A1236" opacity={0.78} />
-          <rect x={-name.length * 5.6 - 9} y={-9} width={name.length * 11.2 + 18} height={18} rx={9} fill="none" stroke="#FFFFFF" strokeOpacity={0.5} strokeWidth={1} />
-          {me && <circle cx={-name.length * 5.6 - 2} cy={0} r={2.6} fill="#FFE27A" />}
-          <text x={me ? 3 : 0} y={4} textAnchor="middle" fontSize={10.5} fontWeight={800} fill="#fff" fontFamily="Pretendard Variable, Pretendard, sans-serif">
+          <rect x={-name.length * 5.6 - 9} y={-8} width={name.length * 11.2 + 18} height={19} rx={9.5} fill="#1A1236" opacity={0.25} />
+          <rect x={-name.length * 5.6 - 9} y={-9} width={name.length * 11.2 + 18} height={18} rx={9} fill={me ? '#FFE27A' : '#FFFFFF'} stroke="#1B1D45" strokeOpacity={0.75} strokeWidth={1.4} />
+          {me && <circle cx={-name.length * 5.6 - 1.5} cy={0} r={2.4} fill="#F25C54" />}
+          <text x={me ? 3 : 0} y={4} textAnchor="middle" fontSize={10.5} fontWeight={900} fill="#2A2140" fontFamily="Pretendard Variable, Pretendard, sans-serif">
             {name}
           </text>
         </g>

@@ -149,7 +149,7 @@ export function BagPanel({ onClose }: { onClose: () => void }) {
     <div className="relative flex flex-col items-center rounded-2xl border-2 border-[#E8D7BE] bg-gradient-to-b from-white to-[#FFF6E8] p-2 text-center">
       <span className="text-[1.75rem] leading-none">{emoji}</span>
       <span className="mt-1 w-full truncate text-[0.6875rem] font-black">{name}</span>
-      {sub && <span className="text-[0.5625rem] font-bold text-mute">{sub}</span>}
+      {sub && <span className="text-[0.625rem] font-bold text-mute">{sub}</span>}
       <span className="absolute right-1 top-1 rounded-full bg-ink px-1.5 text-[0.625rem] font-black text-white">{n}</span>
     </div>
   )
@@ -328,6 +328,18 @@ export function SettingsPanel({ onClose, onCharacter }: { onClose: () => void; o
               </GameButton>
             </div>
             <p className="mt-1 text-[0.625rem] font-semibold text-mute">{app.settings.aiKey ? '✅ 연결됨 · 공장 → 👔 경영진 탭에서 회의해요' : '키가 없어도 팀장들의 기본 조언은 볼 수 있어요'}</p>
+          </Card>
+          <Card>
+            <label className="flex items-center justify-between gap-2">
+              <span>
+                <span className="block text-[0.8125rem] font-black">🪶 가벼운 효과</span>
+                <span className="block text-[0.6875rem] font-semibold text-sub">구름 그림자·꽃잎·나비·반딧불·물 반짝임을 꺼서 오래된 폰에서도 부드럽게.</span>
+              </span>
+              <input type="checkbox" checked={!!app.settings.lowFx} onChange={(e) => app.updateSettings({ lowFx: e.target.checked })} className="size-5 accent-primary" />
+            </label>
+            <GameButton size="sm" tone="white" className="mt-2" onClick={() => (app.updateSettings({ helpSeen: false }), onClose())}>
+              ❓ 조작 도움말 다시 보기
+            </GameButton>
           </Card>
           <Card>
             <label className="flex items-center justify-between gap-2">

@@ -215,7 +215,7 @@ function WorkTab({ openLesson }: { openLesson: (id: string) => void }) {
             {job.history.slice(-7).map((h, i) => (
               <div key={i} className="flex flex-1 flex-col items-center gap-0.5">
                 <div className={cx('w-full rounded-t-md', h.perf >= 80 ? 'bg-teal' : h.perf >= 50 ? 'bg-sun' : 'bg-coral')} style={{ height: `${Math.max(8, h.perf * 0.48)}px` }} />
-                <span className="text-[0.5rem] font-bold text-mute">{h.date.slice(8)}</span>
+                <span className="text-[0.625rem] font-bold text-mute">{h.date.slice(8)}</span>
               </div>
             ))}
             {!job.history.length && <p className="w-full self-center text-center text-[0.6875rem] font-semibold text-mute">아직 기록이 없어요</p>}
@@ -268,7 +268,7 @@ function CareerTab({ onStartup, openLesson }: { onStartup: () => void; openLesso
                 {i === job.rank ? '나' : i < job.rank ? <Check className="size-3.5" strokeWidth={3} /> : ''}
               </div>
               <span className={cx('mt-1 text-[0.6875rem] font-black', i === job.rank ? 'text-primary' : 'text-sub')}>{r.name}</span>
-              <span className="text-[0.5625rem] font-bold text-mute">{won(r.pay)}/일</span>
+              <span className="text-[0.625rem] font-bold text-mute">{won(r.pay)}/일</span>
             </div>
           ))}
         </div>

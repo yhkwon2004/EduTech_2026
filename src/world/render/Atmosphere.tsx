@@ -58,7 +58,7 @@ const FIREFLIES = Array.from({ length: 14 }, (_, i) => ({ left: `${(i * 41 + 7) 
 const STARS = Array.from({ length: 16 }, (_, i) => ({ left: `${(i * 53 + 11) % 100}%`, top: `${(i * 17) % 34}%`, d: -i * 0.4, s: 2 + (i % 3) }))
 
 /** 화면 위에 얹는 공기감: 구름·구름 그림자·햇빛·꽃잎·새·반딧불·비네트 */
-export const Atmosphere = memo(function Atmosphere({ night }: { night: boolean }) {
+export const Atmosphere = memo(function Atmosphere({ night, low = false }: { night: boolean; low?: boolean }) {
   return (
     <div className="pointer-events-none absolute inset-0 z-[8] overflow-hidden" aria-hidden>
       {/* 구름 그림자 (땅 위를 지나감) */}
@@ -81,6 +81,7 @@ export const Atmosphere = memo(function Atmosphere({ night }: { night: boolean }
       {!night && <div className="sun-rays absolute -left-[10%] -top-[30%] h-[90%] w-[60%]" />}
       {/* 꽃잎 */}
       {!night &&
+        !low &&
         PETALS.map((p, i) => (
           <span
             key={`p${i}`}
@@ -100,6 +101,7 @@ export const Atmosphere = memo(function Atmosphere({ night }: { night: boolean }
       ))}
       {/* 새 떼 */}
       {!night &&
+        !low &&
         FLOCKS.map((f, i) => (
           <div key={`f${i}`} className="bird-fly absolute left-0" style={{ top: f.top, animationDuration: `${f.dur}s`, animationDelay: `${f.delay}s`, ['--s' as string]: f.s }}>
             <div className="relative h-6 w-16">
@@ -119,6 +121,7 @@ export const Atmosphere = memo(function Atmosphere({ night }: { night: boolean }
           />
         ))}
       {night &&
+        !low &&
         FIREFLIES.map((f, i) => (
           <span
             key={`ff${i}`}

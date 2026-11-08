@@ -272,7 +272,7 @@ function ResearchTab() {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1 text-[0.8125rem] font-black">
                     {r.name}
-                    <span className="rounded-full bg-black/5 px-1.5 text-[0.5625rem] text-sub">Lv.{r.level}</span>
+                    <span className="rounded-full bg-black/5 px-1.5 text-[0.625rem] text-sub">Lv.{r.level}</span>
                   </span>
                   <span className="block text-[0.625rem] font-semibold text-sub">{r.desc}</span>
                 </span>
@@ -348,7 +348,7 @@ function ExpandTab() {
               <p className="text-[0.9375rem] font-black">
                 {e} {v}
               </p>
-              <p className="text-[0.5625rem] font-bold text-sub">{l}</p>
+              <p className="text-[0.625rem] font-bold text-sub">{l}</p>
             </div>
           ))}
         </div>
@@ -421,7 +421,7 @@ function SellTab() {
               <span key={ch.id} className={cx('flex shrink-0 items-center gap-1 rounded-xl px-2 py-1 text-[0.6875rem] font-black', open ? 'bg-ink text-white' : 'bg-black/5 text-sub')}>
                 {open ? ch.emoji : <Lock className="size-3" />} {ch.name} ×{ch.mul}
                 {!open && r && (
-                  <span className="text-[0.5625rem] font-bold opacity-70">
+                  <span className="text-[0.625rem] font-bold opacity-70">
                     · {r.name} + Lv.{r.level}
                   </span>
                 )}
@@ -543,7 +543,7 @@ function CompanyTab() {
               ['라인', `${c.lines}개`],
             ].map(([l, v]) => (
               <div key={l} className="rounded-xl bg-white/15 py-1">
-                <p className="text-[0.5625rem] opacity-80">{l}</p>
+                <p className="text-[0.625rem] opacity-80">{l}</p>
                 <p>{v}</p>
               </div>
             ))}

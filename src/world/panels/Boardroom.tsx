@@ -5,7 +5,7 @@ import { useApp } from '@/store/app'
 import { useWorld } from '../store'
 import { useCompany } from '../companyStore'
 import { DEPTS, DEPT_MAP, companyLevel, costMul, dailySalary, qualityStars, researchSpeed, salesMul, marketingMul, staffSpeed, type DeptId } from '../company'
-import { askAdvisor, offlineAdvice, type ChatTurn } from '../ai'
+import { offlineAdvice, type ChatTurn } from '../ai'
 import { toLook, type Look } from '../avatar'
 import { sfx } from '../audio'
 import { fxAt } from '../fx'
@@ -67,6 +67,7 @@ export function BoardroomTab({ openSettings }: { openSettings: () => void }) {
     setBusy(true)
     abort.current = new AbortController()
     try {
+      const { askAdvisor } = await import('../aiClient')
       const r = await askAdvisor(dept, thread, msg, { apiKey, model, signal: abort.current.signal })
       push(dept, { role: 'assistant', text: r.text, actions: r.actions, at: Date.now() })
       if (r.actions.length) {
@@ -255,7 +256,7 @@ export function StaffTab() {
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1 text-[0.8125rem] font-black">
                   {d.emoji} {d.name}
-                  <span className="rounded-full bg-black/5 px-1.5 text-[0.5625rem] text-sub">일급 {d.salary.toLocaleString()}원</span>
+                  <span className="rounded-full bg-black/5 px-1.5 text-[0.625rem] text-sub">일급 {d.salary.toLocaleString()}원</span>
                 </span>
                 <span className="block text-[0.625rem] font-semibold text-sub">{d.perk}</span>
                 <span className="mt-0.5 flex gap-0.5">
@@ -340,7 +341,7 @@ export function StaffTab() {
             <span>{'★'.repeat(qualityStars(c.done, c.staff))}</span>
           </p>
           <Bar value={lv.progress} color="bg-[#5B6BBF]" className="mt-1.5" />
-          <p className="mt-0.5 text-[0.5625rem] text-mute">
+          <p className="mt-0.5 text-[0.625rem] text-mute">
             회사 Lv.{lv.level} · 고용 1명당 +20 XP <Chip>매일 자정 월급</Chip>
           </p>
         </Card>

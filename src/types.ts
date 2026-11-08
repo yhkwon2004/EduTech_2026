@@ -92,6 +92,10 @@ export interface Settings {
   /** AI 경영진 — 내 Anthropic API 키 (이 기기에만 저장) */
   aiKey?: string
   aiModel?: string
+  /** 가벼운 효과 (저사양 기기) */
+  lowFx?: boolean
+  /** 도움말을 본 적 있나 */
+  helpSeen?: boolean
 }
 
 export interface LessonProgress {

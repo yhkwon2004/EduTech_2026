@@ -179,6 +179,9 @@ function buildGround(): Ground[][] {
   for (let x = 14; x <= 23; x++) set(x, 14, 'path')
   set(14, 12, 'path')
   set(14, 13, 'path')
+  // 공장 지대로 가는 흙길 (큰길 아래 끝에서 공장 하역장까지)
+  for (let x = 13; x <= 22; x++) set(x, 19, 'path')
+  for (let y = 15; y <= 19; y++) set(12, y, 'road')
   set(19, 12, 'path')
   set(19, 13, 'path')
   set(20, 12, 'path')
@@ -271,6 +274,9 @@ export const DECOS: DecoDef[] = [
   { kind: 'lamp', x: 3, y: 10 },
   { kind: 'lamp', x: 22, y: 10 },
   { kind: 'lamp', x: 13, y: 2 },
+  { kind: 'lamp', x: 15, y: 18 },
+  { kind: 'lamp', x: 19, y: 18 },
+  { kind: 'bench', x: 17, y: 18 },
   { kind: 'bench', x: 10, y: 10 },
   { kind: 'bench', x: 14, y: 8 },
   { kind: 'flowers', x: 13, y: 7, v: 3 },

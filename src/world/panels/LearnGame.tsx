@@ -328,7 +328,7 @@ function Chapter({ course, index, onPick, onChest }: { course: Course; index: nu
         <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/25 to-transparent" />
         <span className="relative grid size-8 shrink-0 place-items-center rounded-xl bg-white/25 text-[1.125rem] ring-2 ring-white/40">{CAT_EMOJI[course.category]}</span>
         <span className="relative min-w-0 flex-1">
-          <span className="block text-[0.5625rem] font-black opacity-90">
+          <span className="block text-[0.625rem] font-black opacity-90">
             CHAPTER {index + 1} · {course.level}
           </span>
           <span className="block truncate text-[0.8125rem] font-black leading-tight">{course.title}</span>
@@ -392,7 +392,7 @@ function Chapter({ course, index, onPick, onChest }: { course: Course; index: nu
               </button>
               <span className="absolute left-1/2 top-full mt-0.5 flex -translate-x-1/2 gap-px">
                 {st === 'current' ? (
-                  <span className="whitespace-nowrap rounded-full bg-ink px-1.5 text-[0.5rem] font-black text-[#FFE27A]">START</span>
+                  <span className="whitespace-nowrap rounded-full bg-ink px-1.5 text-[0.625rem] font-black text-[#FFE27A]">START</span>
                 ) : (
                   [0, 1, 2].map((k) => <StarIcon key={k} on={k < s} size={11} />)
                 )}
@@ -407,7 +407,7 @@ function Chapter({ course, index, onPick, onChest }: { course: Course; index: nu
           style={{ left: `${CHEST_POS.x}%`, top: `${CHEST_POS.y}%` }}
         >
           <ChestArt state={!done ? 'locked' : opened ? 'open' : 'ready'} size={done && !opened ? 50 : 44} />
-          {done && !opened && <span className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-coral text-[0.5625rem] font-black text-white ring-2 ring-white">!</span>}
+          {done && !opened && <span className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-coral text-[0.625rem] font-black text-white ring-2 ring-white">!</span>}
         </button>
       </div>
       {/* 보상 */}
@@ -608,14 +608,14 @@ function Track({ steps, pos, cards, look }: { steps: number; pos: number; cards:
       }}
     >
       <span className="pointer-events-none absolute left-[12%] top-1 text-[0.625rem] opacity-80">☁️</span>
-      <span className="pointer-events-none absolute left-[58%] top-0.5 text-[0.5rem] opacity-70">☁️</span>
+      <span className="pointer-events-none absolute left-[58%] top-0.5 text-[0.625rem] opacity-70">☁️</span>
       <span className="absolute inset-x-[5%] bottom-[0.55rem] h-1 rounded-full bg-[#8BC36F]" />
       <span className="absolute bottom-[0.55rem] left-[5%] h-1 rounded-full bg-[#FFE27A] transition-all duration-700" style={{ width: `${(pos / steps) * 88}%` }} />
       {Array.from({ length: steps }, (_, k) => (
         <span
           key={k}
           className={cx(
-            'absolute bottom-[0.3rem] grid -translate-x-1/2 place-items-center rounded-full border-2 border-white text-[0.5rem] font-black',
+            'absolute bottom-[0.3rem] grid -translate-x-1/2 place-items-center rounded-full border-2 border-white text-[0.625rem] font-black',
             k < cards ? 'size-3.5' : 'size-[1.05rem]',
             k < pos ? 'bg-[#FFC93C] text-ink' : k < cards ? 'bg-white/80' : 'bg-[#FFF3C4] text-[#B7860B]',
           )}
@@ -1032,7 +1032,7 @@ function QuizView({
       >
         <p className="flex items-center gap-1.5 text-[0.6875rem] font-black text-[#B7860B]">
           QUIZ {n + 1}/{total}
-          {bonus && <span className="rounded-full bg-violet px-1.5 text-[0.5625rem] text-white">BONUS</span>}
+          {bonus && <span className="rounded-full bg-violet px-1.5 text-[0.625rem] text-white">BONUS</span>}
         </p>
         <p className="mt-1 text-[1rem] font-black leading-snug">{quiz.q}</p>
         {picked !== null && (
@@ -1204,7 +1204,7 @@ function ResultView({
         <div className="flex items-end justify-center gap-2">
           <div className="card-in shine-sweep w-[12.5rem] overflow-hidden rounded-2xl border-[3px] border-white shadow-[0_8px_20px_rgba(32,34,68,0.25)]" style={{ animationDelay: '0.9s' }}>
             <div className="relative px-2.5 py-1.5 text-white" style={{ background: meta.gradient }}>
-              <p className="text-[0.5625rem] font-black opacity-90">📖 지식 카드 {result.first && '· NEW!'}</p>
+              <p className="text-[0.625rem] font-black opacity-90">📖 지식 카드 {result.first && '· NEW!'}</p>
               <p className="truncate text-[0.8125rem] font-black">
                 {CAT_EMOJI[course.category]} {lesson.title}
               </p>
@@ -1264,7 +1264,7 @@ export function CollectionTab({ open }: { open: (lessonId: string) => void }) {
                 )}
                 style={{ background: meta.gradient }}
               >
-                <span className="absolute left-1.5 top-1 text-[0.5625rem] font-black text-white/85">No.{String(no).padStart(2, '0')}</span>
+                <span className="absolute left-1.5 top-1 text-[0.625rem] font-black text-white/85">No.{String(no).padStart(2, '0')}</span>
                 <span className="absolute right-1 top-1 flex">
                   {[0, 1, 2].map((k) => (
                     <StarIcon key={k} on={k < s} size={10} />
@@ -1277,7 +1277,7 @@ export function CollectionTab({ open }: { open: (lessonId: string) => void }) {
               </button>
             ) : (
               <div key={l.id} className="relative flex h-[8.6rem] flex-col overflow-hidden rounded-2xl border-[3px] border-dashed border-black/10 bg-gradient-to-b from-[#EDEBF3] to-[#E1DEEA]">
-                <span className="absolute left-1.5 top-1 text-[0.5625rem] font-black text-black/30">No.{String(no).padStart(2, '0')}</span>
+                <span className="absolute left-1.5 top-1 text-[0.625rem] font-black text-black/30">No.{String(no).padStart(2, '0')}</span>
                 <span className="grid flex-1 place-items-center">
                   <span className="silhouette text-[2rem]">{CAT_EMOJI[c.category]}</span>
                 </span>
