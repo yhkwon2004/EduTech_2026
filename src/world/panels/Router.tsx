@@ -16,6 +16,7 @@ import { CharacterPanel } from './CharacterPanel'
 import { TreePanel } from './TreePanel'
 import { NpcQuizPanel } from './NpcQuizPanel'
 import { BuildPanel } from './BuildPanel'
+import { FactoryPanel } from './FactoryPanel'
 
 export type MenuId = 'bag' | 'quest' | 'rank' | 'settings' | 'character' | 'build'
 export interface PanelState {
@@ -77,6 +78,8 @@ export function PanelRouter({
           }}
         />
       )
+    case 'factory':
+      return <FactoryPanel onClose={onClose} goMarket={() => walk('market')} />
     case 'build':
       return <BuildPanel id={panel.sub as BuildingId} onClose={onClose} openLesson={openLesson} onBuilt={() => walk(panel.sub as BuildingId)} />
     case 'tree':

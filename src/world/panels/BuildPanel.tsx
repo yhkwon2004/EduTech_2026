@@ -22,6 +22,11 @@ const PREVIEW: Record<string, { bg: string; desc: string; items: string[] }> = {
     desc: '레시피대로 재료를 넣어 상품을 만들어요. 작업대는 레벨마다 늘어나요.',
     items: ['🍳 레시피 제작', '⏱ 실시간 타이머', '🔧 작업대 최대 5개', '📊 원가율 보기'],
   },
+  factory: {
+    bg: 'linear-gradient(135deg,#5B6BBF,#2E3B8A)',
+    desc: '원료로 포장식품을 생산하고, 연구개발로 새 제품을 열고, 공장을 늘려 편의점·마트·온라인·수출까지 납품해요.',
+    items: ['🏭 생산 라인 (최대 5개)', '🔬 연구개발 19종', '📈 회사 레벨 9단계', '🚚 유통 채널 5곳'],
+  },
   support: {
     bg: 'linear-gradient(135deg,#2FA594,#167F71)',
     desc: '지원사업을 신청하고 정책자금을 빌리고, 오늘의 영수증을 정리해요.',

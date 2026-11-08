@@ -21,7 +21,7 @@ export function screenToTile(sx: number, sy: number): { x: number; y: number } {
 
 export type Ground = 'grass' | 'road' | 'plaza' | 'path' | 'water' | 'sand' | 'soil'
 
-export type BuildingId = 'shop' | 'workshop' | 'market' | 'academy' | 'company' | 'support' | 'board' | 'tree'
+export type BuildingId = 'shop' | 'workshop' | 'market' | 'academy' | 'company' | 'support' | 'board' | 'tree' | 'factory'
 export type HitId = BuildingId | `rival:${number}` | `plot:${string}` | `npc:${number}`
 
 export interface BuildingDef {
@@ -73,6 +73,7 @@ export const BUILDINGS: BuildingDef[] = [
   { id: 'company', name: '골목상사', x: 8, y: 12, w: 3, d: 3, door: { x: 11, y: 13 }, doorSide: 'x', desc: '입사 · 출근 · 승진' },
   { id: 'board', name: '마을 게시판', x: 10, y: 7, w: 1, d: 1, door: { x: 10, y: 8 }, doorSide: 'y', desc: '퀘스트 · 랭킹 · 동네 소식' },
   { id: 'tree', name: '배움 나무', x: 13, y: 8, w: 1, d: 1, door: { x: 13, y: 9 }, doorSide: 'y', desc: '레슨을 끝낼 때마다 자라는 나무' },
+  { id: 'factory', name: '식품 공장', x: 20, y: 16, w: 3, d: 3, door: { x: 21, y: 19 }, doorSide: 'y', desc: '생산 · 연구개발 · 증설 · 납품' },
 ]
 
 export const BUILDING_MAP = Object.fromEntries(BUILDINGS.map((b) => [b.id, b])) as Record<BuildingId, BuildingDef>
@@ -107,6 +108,16 @@ export const BUILDS: BuildDef[] = [
   },
   { id: 'workshop', emoji: '🍳', cost: 10000, minutes: 3, level: 2, lesson: 'l-cost-2', unlocks: '레시피대로 상품 만들기 (작업대)', why: '레시피 원가율을 알면 남는 상품을 만들어요' },
   { id: 'support', emoji: '🏛️', cost: 20000, minutes: 5, level: 3, lesson: 'l-support-1', unlocks: '지원사업 신청 · 정책자금 · 영수증 정리', why: '지원금과 융자의 차이를 알고 신청해요' },
+  {
+    id: 'factory',
+    emoji: '🏭',
+    cost: 50000,
+    minutes: 5,
+    level: 3,
+    lesson: 'l-cost-3',
+    unlocks: '식품 회사 경영: 생산 라인 · 연구개발 · 공장 증설 · 유통 납품',
+    why: '재고와 원가를 숫자로 잡아야 공장을 굴려요',
+  },
 ]
 export const BUILD_MAP = Object.fromEntries(BUILDS.map((b) => [b.id, b])) as Partial<Record<BuildingId, BuildDef>>
 /** 처음부터 있는 건물 */
@@ -275,6 +286,12 @@ export const DECOS: DecoDef[] = [
   ...[21, 22].map((x) => ({ kind: 'fenceX' as DecoKind, x, y: 10 })),
   ...[15, 16, 17, 18, 21, 22].map((x) => ({ kind: 'fenceX' as DecoKind, x, y: 15 })),
 ]
+
+/** 건물 자리와 겹치는 장식은 빼요 */
+for (let i = DECOS.length - 1; i >= 0; i--) {
+  const d = DECOS[i]
+  if (BUILDINGS.some((b) => d.x >= b.x && d.x < b.x + b.w && d.y >= b.y && d.y < b.y + b.d)) DECOS.splice(i, 1)
+}
 
 /** 걸을 수 있는 타일 */
 function buildWalk(): boolean[][] {

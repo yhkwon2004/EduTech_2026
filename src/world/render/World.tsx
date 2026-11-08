@@ -14,6 +14,8 @@ import { energyNow } from '../store'
 import { WorldDefs } from './Defs'
 import { LearnTreeArt } from './Tree'
 import { ConstructionArt, LotArt } from './Construction'
+import { FactoryArt } from './Factory'
+import { useCompany } from '../companyStore'
 import { buildStatus } from '../build'
 import { useApp } from '@/store/app'
 import { npcQuizLeft, treeStage } from '../learn'
@@ -162,6 +164,10 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
   const level = levelOf(world.exp).level
   const doneLessons = useApp((s) => Object.values(s.progress).filter((p) => p.done).length)
   const progress = useApp((s) => s.progress)
+  const factoryJobs = useCompany((s) => s.jobs)
+  const factoryLines = useCompany((s) => s.lines)
+  const companyName = useCompany((s) => s.name)
+  const companyActive = useCompany((s) => s.active)
   const hour = new Date(now).getHours()
   const night = hour >= 19 || hour < 6
 
@@ -771,6 +777,9 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
       case 'tree':
         art = <LearnTreeArt x={b.x} y={b.y} stage={treeStage(doneLessons).index} night={night} />
         break
+      case 'factory':
+        art = <FactoryArt working={factoryJobs.some((j) => !!j)} lines={factoryLines} name={companyName} />
+        break
     }
     items.push({
       depth: b.x + b.w - 1 + b.y + b.d - 1 + 0.4,
@@ -875,6 +884,8 @@ export const World = forwardRef<WorldHandle, { onArrive: (hit: HitId) => void; t
   items.sort((a, b) => a.depth - b.depth)
 
   if (craftReady) markAt('m-craft', 19, 7, 102, '완성!', '#22A090')
+  if (world.buildings.factory === 0 && (factoryJobs.some((j) => j && j.readyAt <= now) || Object.values(companyActive).some((at) => at <= now)))
+    markAt('m-factory', 21.5, 17.5, 110, '완료!', '#5B6BBF')
   if (shopReady) markAt('m-shop', 15.5, 6.5, 118, '영업 시작', '#F25C54')
   if (workReady) markAt('m-work', 9.5, 13.5, 168, '출근', '#3156C4')
   if (target) {

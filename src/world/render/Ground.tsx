@@ -337,7 +337,7 @@ function Shadows() {
       [x0, y1],
     ])
   }
-  const H: Record<string, number> = { shop: 1.25, workshop: 1.05, market: 0.95, academy: 1.6, support: 1.0, company: 2.6, board: 0.45 }
+  const H: Record<string, number> = { shop: 1.25, workshop: 1.05, market: 0.95, academy: 1.6, support: 1.0, company: 2.6, board: 0.45, factory: 1.5 }
   for (const b of BUILDINGS) if (H[b.id]) out.push(<polygon key={b.id} points={hex(b.x - 0.05, b.y - 0.05, b.w + 0.1, b.d + 0.1, H[b.id])} />)
   for (const r of RIVAL_LOTS) out.push(<polygon key={`r${r.index}`} points={hex(r.x - 0.05, r.y - 0.05, 2.1, 2.1, 0.95)} />)
   for (const d of DECOS) {

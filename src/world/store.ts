@@ -109,6 +109,8 @@ export interface WorldState {
   gainEnergy: (n: number) => void
   addExp: (n: number) => number
   addCash: (n: number) => void
+  /** 돈이 있으면 빼고 true */
+  spendCash: (n: number) => boolean
   setCash: (n: number) => void
   bump: (key: string, n?: number) => void
   visit: (id: string) => void
@@ -239,6 +241,11 @@ export const useWorld = create<WorldState>()(
           return after - before
         },
         addCash: (n) => set({ cash: Math.round(get().cash + n) }),
+        spendCash: (n) => {
+          if (get().cash < n) return false
+          set({ cash: Math.round(get().cash - n) })
+          return true
+        },
         setCash: (n) => set({ cash: Math.round(n) }),
         bump: (key, n = 1) => bumpBoth(key, n),
         visit: (id) => !get().visited[id] && set({ visited: { ...get().visited, [id]: true } }),
